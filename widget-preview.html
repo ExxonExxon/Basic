@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradsiee Widget | Live Preview</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f0f0f0;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 40px;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+        h1 { font-weight: 800; letter-spacing: -0.02em; }
+        p { color: #666; margin-bottom: 30px; }
+        .back-btn {
+            text-decoration: none;
+            color: #000;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            background: #eee;
+            transition: 0.2s;
+        }
+        .back-btn:hover { background: #e5e5e5; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Live Preview</h1>
+        <p>This page simulates how the Tradsiee Widget will appear on your actual website. Use the widget below to send a test lead!</p>
+        <a href="portal.html" class="back-btn">Back to Portal</a>
+    </div>
+
+    <!-- The Tradsiee Widget Target -->
+    <div id="tradsiee-widget" style="margin-top: 50px;"></div>
+
+    <script>
+        // Get slug from URL
+        const params = new URLSearchParams(window.location.search);
+        const slug = params.get('slug');
+        const API_BASE = "http://127.0.0.1:8000";
+
+        if (slug) {
+            // Inject the loader script dynamically
+            const script = document.createElement('script');
+            script.src = `${API_BASE}/loader.js?slug=${slug}`;
+            script.async = true;
+            document.body.appendChild(script);
+        } else {
+            document.querySelector('h1').innerText = "Missing Slug";
+            document.querySelector('p').innerText = "Please open this preview from your Tradsiee Portal.";
+        }
+    </script>
+
+</body>
+</html>

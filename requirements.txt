@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+supabase
+cloudinary
+python-dotenv
+pydantic
+twilio
+invoke
+rich
