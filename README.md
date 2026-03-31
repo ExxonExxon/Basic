@@ -1,4 +1,4 @@
-# 🛠️ Tradsiee
+# Tradsiee
 
 **The Video Lead Generation Engine for Tradies.**
 
@@ -6,17 +6,17 @@ Tradsiee helps tradespeople understand jobs before they arrive. Customers record
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-- 📹 **Video-First Leads:** High-quality video uploads for clear job context.
-- 📲 **Instant Notifications:** Real-time SMS alerts via Twilio.
-- 📊 **Tradie Dashboard:** Comprehensive portal for managing leads and business performance.
-- 🧩 **Easy Integration:** Simple widget injection for any website.
-- 🔐 **Secure & Reliable:** Powered by Supabase Auth and FastAPI.
+- **Video-First Leads:** High-quality video uploads for clear job context.
+- **Instant Notifications:** Real-time SMS alerts via Twilio.
+- **Tradie Dashboard:** Comprehensive portal for managing leads and business performance.
+- **Easy Integration:** Simple widget injection for any website.
+- **Secure & Reliable:** Powered by Supabase Auth and FastAPI.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Backend:** Python ([FastAPI](https://fastapi.tiangolo.com/))
 - **Database & Auth:** [Supabase](https://supabase.com/)
@@ -26,7 +26,7 @@ Tradsiee helps tradespeople understand jobs before they arrive. Customers record
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 1.  **Widget Injection:** Tradies embed a simple `<script>` tag.
 2.  **Customer Flow:** Users input details and record/upload a video.
@@ -36,7 +36,7 @@ Tradsiee helps tradespeople understand jobs before they arrive. Customers record
 
 ---
 
-## 🚦 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Python 3.12+
@@ -63,7 +63,7 @@ Tradsiee helps tradespeople understand jobs before they arrive. Customers record
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 - `main.py`: FastAPI application & API routes.
 - `portal.html`: The Tradie dashboard.
@@ -71,5 +71,3 @@ Tradsiee helps tradespeople understand jobs before they arrive. Customers record
 - `login.html` / `signup.html`: Authentication flow.
 - `tasks.py`: Background tasks and helper functions.
 
----
-*Tradsiee — See the job. Save the time.*
