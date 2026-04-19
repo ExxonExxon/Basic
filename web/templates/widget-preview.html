@@ -1,3 +1,19 @@
+<!-- 
+[LIVE_PREVIEW_SYSTEM_SPECIFICATION]
+This file implements the real-time simulation environment for Tradsiee business owners.
+It allows tradies to experience the customer journey directly from their portal.
+
+[ARCHITECTURAL_WORKFLOW]
+1. Context Acquisition: Extracts the business 'slug' from the URL query parameters.
+2. Dynamic Bootstrapping: Injects the Tradsiee 'loader.js' into the DOM to replicate 
+   real-world embedding behavior.
+3. Functional Testing: Facilitates 'smoke tests' of the lead capture pipeline without 
+   leaving the Tradsiee ecosystem.
+
+[UX_PATTERNS]
+- Isolated Viewport: Centers the widget in a clean, high-contrast environment for better focus.
+- Navigation Bridge: Provides a clear exit path back to the workspace portal.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,6 +21,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tradsiee Widget | Live Preview</title>
     <style>
+        /* [UI_THEME_DEFINITION] */
         body {
             margin: 0;
             padding: 0;
@@ -48,24 +65,29 @@
         <a href="portal.html" class="back-btn">Back to Portal</a>
     </div>
 
-    <!-- The Tradsiee Widget Target -->
+    <!-- [INJECTION_TARGET] The Tradsiee Widget Loader will append the iframe here. -->
     <div id="tradsiee-widget" style="margin-top: 50px;"></div>
 
     <script>
-        // Get slug from URL
+        /* [BOOTSTRAP_ORCHESTRATION] 
+           Resolves the tenant context and dynamically loads the widget logic.
+        */
         const params = new URLSearchParams(window.location.search);
         const slug = params.get('slug');
-        const API_BASE = "http://127.0.0.1:8000";
+        const API_BASE = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
+            ? "http://127.0.0.1:8000"
+            : window.location.origin;
 
         if (slug) {
-            // Inject the loader script dynamically
+            // [WIDGET_INJECTION] Dynamically load the loader script with the tenant slug.
             const script = document.createElement('script');
             script.src = `${API_BASE}/loader.js?slug=${slug}`;
             script.async = true;
             document.body.appendChild(script);
         } else {
+            // [FALLBACK_STATE] Error handling for missing business context.
             document.querySelector('h1').innerText = "Missing Slug";
-            document.querySelector('p').innerText = "Please open this preview from your Tradsiee Portal.";
+            document.querySelector('p').innerText = "Please open this preview from your Tradsiee Portal to see your widget.";
         }
     </script>
 

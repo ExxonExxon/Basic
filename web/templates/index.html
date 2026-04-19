@@ -1,19 +1,24 @@
 <!-- 
-    AI_INFO: 
-    This file is the core Tradsiee Lead Submission Widget. It operates as a multi-step wizard (3 steps) 
-    designed to capture high-intent leads via video. 
-    
-    ARCHITECTURAL INTENT:
-    - Step 1 (Identification): Captures lead contact info (Name, Phone).
-    - Step 2 (Payload): Captures the high-value asset (Video) and context (Description). 
-      - This step initiates an asynchronous, side-effect-heavy upload to Cloudinary.
-      - Uses chunked uploading for files > 95MB to handle large 4K recordings.
-    - Step 3 (Confirmation): Terminal state indicating successful submission.
+[LEAD_SUBMISSION_WIDGET_SPECIFICATION]
+This file implements the core customer-facing interface for Tradsiee lead generation.
+It is architected as a high-friction, multi-step wizard designed to qualify intent 
+through video-based problem descriptions.
 
-    DATA BINDING & STATE:
-    - Widget state is managed by the `tsGoStep(n)` function toggling visibility of `.ts-step` elements.
-    - Progress is tracked via `.ts-progress-dot` classes (`active`, `done`).
-    - Form data is collected directly from DOM element IDs at the moment of submission (`tsSubmit`).
+[ARCHITECTURAL_WORKFLOW]
+- Step 1 (Identification): Captures lead contact identity (E.164 phone normalization).
+- Step 2 (Payload Ingestion): Orchestrates the acquisition of the primary lead asset (video) 
+  and qualitative context (textual description). 
+- Step 3 (Terminal Success): Final confirmation of lead receipt and persistence.
+
+[MULTIMEDIA_PIPELINE_ENGINE]
+- Direct-to-Cloud Upload: Implements an unsigned client-side upload strategy to Cloudinary.
+- Adaptive Transmission: Automatically switches between single-stream and chunked 
+  (multipart) uploading based on a 95MB file size threshold to ensure 4K asset integrity.
+- Real-time Progress Instrumentation: Uses XHR event listeners to drive reactive UI progress bars.
+
+[STATE_MANAGEMENT_STRATEGY]
+- Transition Logic: Managed via the 'tsGoStep(n)' orchestration function.
+- Data Aggregation: Collects transient DOM state into a final JSON payload for the FastAPI backend.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -23,9 +28,9 @@
     <title>Tradsiee Widget</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* ============================================
-           TRADSIEE WIDGET — FULLY SCOPED CSS
-        ============================================ */
+        /* [WIDGET_CSS_SCOPE] 
+           Fully isolated styling to prevent collisions when embedded on 3rd party host sites.
+        */
         #tradsiee-widget-root {
             font-family: 'Plus Jakarta Sans', sans-serif;
             -webkit-font-smoothing: antialiased;
@@ -51,50 +56,23 @@
         #tradsiee-widget-root .ts-progress { display: flex; gap: 6px; margin-bottom: 24px; }
         #tradsiee-widget-root .ts-progress-dot { height: 3px; flex: 1; border-radius: 99px; background: #F2F2F7; transition: background 0.3s ease; }
         #tradsiee-widget-root .ts-progress-dot.done { background: #000; }
-        #tradsiee-widget-dot.active { background: #007AFF; }
+        #tradsiee-widget-root .ts-progress-dot.active { background: #007AFF; }
         #tradsiee-widget-root .ts-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #8E8E93; display: block; margin-bottom: 8px; }
         #tradsiee-widget-root .ts-input { width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.08); background: #F2F2F7; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; color: #1C1C1E; outline: none; transition: all 0.2s ease; appearance: none; }
         #tradsiee-widget-root .ts-input:focus { background: #fff; border-color: #007AFF; box-shadow: 0 0 0 3px rgba(0,122,255,0.12); }
         #tradsiee-widget-root .ts-phone-row { display: flex; gap: 8px; }
-        #tradsiee-widget-root .ts-phone-row select.ts-input { width: auto; flex-shrink: 0; }
-        #tradsiee-widget-root .ts-phone-row .ts-input-flex { flex: 1; }
-        #tradsiee-widget-root textarea.ts-input { resize: none; min-height: 88px; line-height: 1.5; }
-        #tradsiee-widget-root .ts-name-row { display: flex; gap: 8px; }
-        #tradsiee-widget-root .ts-name-row .ts-input { flex: 1; }
         #tradsiee-widget-root .ts-upload-zone { border: 2px dashed rgba(0,0,0,0.1); border-radius: 20px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; background: #F2F2F7; position: relative; }
         #tradsiee-widget-root .ts-upload-zone:hover { border-color: #007AFF; background: rgba(0,122,255,0.04); }
-        #tradsiee-widget-root .ts-upload-zone.uploading { border-color: #007AFF; background: rgba(0,122,255,0.03); pointer-events: none; }
-        #tradsiee-widget-root .ts-upload-zone.has-video { border-color: #34C759; background: rgba(52,199,89,0.04); }
         #tradsiee-widget-root .ts-upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-        #tradsiee-widget-root .ts-upload-icon { width: 44px; height: 44px; background: #fff; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        #tradsiee-widget-root .ts-upload-icon svg { width: 22px; height: 22px; color: #007AFF; }
-        #tradsiee-widget-root .ts-upload-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-        #tradsiee-widget-root .ts-upload-sub { font-size: 11px; color: #8E8E93; font-weight: 500; }
         #tradsiee-widget-root .ts-video-preview { width: 100%; border-radius: 16px; overflow: hidden; background: #000; margin-top: 12px; display: none; position: relative; }
         #tradsiee-widget-root .ts-video-preview video { width: 100%; max-height: 180px; object-fit: cover; display: block; }
-        #tradsiee-widget-root .ts-video-badge { position: absolute; top: 10px; right: 10px; background: rgba(52,199,89,0.9); color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 10px; border-radius: 99px; }
         #tradsiee-widget-root .ts-upload-progress { display: none; margin-top: 12px; }
         #tradsiee-widget-root .ts-upload-progress-track { background: #F2F2F7; border-radius: 99px; height: 5px; overflow: hidden; }
         #tradsiee-widget-root .ts-upload-progress-fill { height: 100%; width: 0%; background: #007AFF; border-radius: 99px; transition: width 0.15s ease; }
-        #tradsiee-widget-root .ts-upload-progress-fill.done { background: #34C759; }
-        #tradsiee-widget-root .ts-upload-progress-fill.error { background: #FF3B30; }
-        #tradsiee-widget-root .ts-upload-progress-meta { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #8E8E93; margin-top: 6px; }
         #tradsiee-widget-root .ts-btn { width: 100%; padding: 15px; border-radius: 18px; border: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); display: flex; align-items: center; justify-content: center; gap: 8px; }
         #tradsiee-widget-root .ts-btn-primary { background: #000; color: #fff; }
-        #tradsiee-widget-root .ts-btn-primary:hover { background: #1C1C1E; transform: scale(0.99); }
-        #tradsiee-widget-root .ts-btn-primary:active { transform: scale(0.97); }
-        #tradsiee-widget-root .ts-btn-primary:disabled { background: #C7C7CC; cursor: not-allowed; }
-        #tradsiee-widget-root .ts-btn-ghost { background: #F2F2F7; color: #8E8E93; }
-        #tradsiee-widget-root .ts-stack { display: flex; flex-direction: column; gap: 12px; }
         #tradsiee-widget-root .ts-spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: tsSpin 0.7s linear infinite; display: none; }
         @keyframes tsSpin { to { transform: rotate(360deg); } }
-        #tradsiee-widget-root .ts-error { font-size: 11px; color: #FF3B30; font-weight: 600; display: none; margin-top: 4px; }
-        #tradsiee-widget-root .ts-success { text-align: center; padding: 12px 0; }
-        #tradsiee-widget-root .ts-success-icon { width: 64px; height: 64px; background: #F2F2F7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
-        #tradsiee-widget-root .ts-success-icon svg { width: 30px; height: 30px; color: #34C759; }
-        #tradsiee-widget-root .ts-success h3 { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; margin-bottom: 8px; }
-        #tradsiee-widget-root .ts-success p { font-size: 13px; color: #8E8E93; font-weight: 500; line-height: 1.5; }
-        #tradsiee-widget-root .ts-footer { text-align: center; margin-top: 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #C7C7CC; }
     </style>
 </head>
 <body>
@@ -109,21 +87,23 @@
             </div>
         </div>
 
-        <!-- UI_INFO: Progress indicator. State managed by updating .ts-progress-dot classes via tsGoStep. -->
+        <!-- [UI_COMPONENT: PROGRESS_STREAK] 
+             Updates via tsGoStep logic to provide visual context of wizard progression.
+        -->
         <div class="ts-progress">
             <div class="ts-progress-dot active" id="prog-1"></div>
             <div class="ts-progress-dot" id="prog-2"></div>
             <div class="ts-progress-dot" id="prog-3"></div>
         </div>
 
-        <!-- Step 1: Details -->
-        <!-- UI_INFO: Identity collection layer. Data bound to ts-first, ts-last, ts-dial, ts-phone. 
-             State transition triggered by 'Continue' button to step 2. -->
+        <!-- [STEP_1: IDENTITY_ACQUISITION] 
+             Captures primary lead metadata.
+        -->
         <div class="ts-step active" id="step-1">
-            <div class="ts-stack">
+            <div style="display:flex;flex-direction:column;gap:12px;">
                 <div>
                     <span class="ts-label">Your Details</span>
-                    <div class="ts-name-row">
+                    <div style="display:flex;gap:8px;">
                         <input class="ts-input" id="ts-first" type="text" placeholder="First name">
                         <input class="ts-input" id="ts-last"  type="text" placeholder="Last name">
                     </div>
@@ -131,101 +111,85 @@
                 <div>
                     <div class="ts-phone-row">
                         <select class="ts-input" id="ts-dial"><option value="+61">🇦🇺 +61</option></select>
-                        <input class="ts-input ts-input-flex" id="ts-phone" type="tel" placeholder="400 000 000">
+                        <input class="ts-input" style="flex:1;" id="ts-phone" type="tel" placeholder="400 000 000">
                     </div>
                 </div>
                 <button class="ts-btn ts-btn-primary" onclick="tsGoStep(2)">Continue</button>
             </div>
         </div>
 
-        <!-- Step 2: Video -->
-        <!-- UI_INFO: Payload collection layer. Handles binary data (video) and text context (description).
-             Side-effect: Triggers background upload to Cloudinary immediately upon file selection. 
-             Binds to ts-file-input and ts-desc. -->
+        <!-- [STEP_2: PAYLOAD_AQUISITION] 
+             Manages binary video data and textual problem descriptions.
+        -->
         <div class="ts-step" id="step-2">
-            <div class="ts-stack">
+            <div style="display:flex;flex-direction:column;gap:12px;">
                 <div class="ts-upload-zone" id="ts-upload-zone">
                     <input type="file" accept="video/*" capture="environment" id="ts-file-input" onchange="tsHandleFile(this)">
-                    <div class="ts-upload-icon">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.069A1 1 0 0121 8.882v6.236a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
-                    </div>
-                    <div class="ts-upload-title">Tap to record or upload</div>
-                    <div class="ts-upload-sub">4K supported, up to 200MB</div>
+                    <div style="font-size:13px;font-weight:700;">Tap to record or upload video</div>
+                    <div style="font-size:11px;color:#8E8E93;">Maximum size: 200MB</div>
                 </div>
 
-                <!-- UI_INFO: Reactive feedback for the background upload side-effect. -->
+                <!-- [UI_COMPONENT: UPLOAD_INSTRUMENTATION] 
+                     Visualizes the background XHR upload progress to Cloudinary.
+                -->
                 <div class="ts-upload-progress" id="ts-upload-progress">
                     <div class="ts-upload-progress-track"><div class="ts-upload-progress-fill" id="ts-progress-fill"></div></div>
-                    <div class="ts-upload-progress-meta"><span id="ts-progress-status">Uploading…</span><span id="ts-progress-pct">0%</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:#8E8E93;margin-top:6px;">
+                        <span id="ts-progress-status">Uploading…</span><span id="ts-progress-pct">0%</span>
+                    </div>
                 </div>
 
                 <div class="ts-video-preview" id="ts-video-preview">
                     <video id="ts-video-el" muted playsinline></video>
-                    <span class="ts-video-badge">✓ Ready</span>
                 </div>
 
-                <textarea class="ts-input" id="ts-desc" placeholder="Describe the problem..."></textarea>
+                <textarea class="ts-input" id="ts-desc" placeholder="Describe what you need help with..."></textarea>
                 <button class="ts-btn ts-btn-primary" id="ts-submit-btn" onclick="tsSubmit()">
                     <span id="ts-btn-label">Send My Request</span>
                     <div class="ts-spinner" id="ts-spinner"></div>
                 </button>
-                <button class="ts-btn ts-btn-ghost" onclick="tsGoStep(1)">Back</button>
+                <button class="ts-btn" style="background:#F2F2F7;color:#8E8E93;" onclick="tsGoStep(1)">Back</button>
             </div>
         </div>
 
-        <!-- Step 3: Success -->
-        <!-- UI_INFO: Terminal success state. Displayed after back-end API confirms lead ingestion. -->
+        <!-- [STEP_3: TERMINATION_SUCCESS] -->
         <div class="ts-step" id="step-3">
-            <div class="ts-success">
-                <div class="ts-success-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/></svg></div>
-                <h3>Request Sent!</h3>
-                <p>We've received your video and will text you back shortly.</p>
+            <div style="text-align:center;padding:12px 0;">
+                <div style="width:64px;height:64px;background:#F2F2F7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <svg width="30" height="30" fill="none" stroke="#34C759" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/></svg>
+                </div>
+                <h3 style="font-size:20px;font-weight:800;margin-bottom:8px;">Request Sent!</h3>
+                <p style="font-size:13px;color:#8E8E93;">We'll get back to you shortly.</p>
             </div>
         </div>
     </div>
-    <div class="ts-footer">Powered by Tradsiee</div>
+    <div style="text-align:center;margin-top:14px;font-size:10px;font-weight:700;text-transform:uppercase;color:#C7C7CC;">Powered by Tradsiee</div>
 </div>
 
 <script>
-    // [AI_INFO] This script handles the lead submission widget logic, including wizard navigation, media upload, and API communication.
-    // [AI_FLOW] Input: Customer identity (Name/Phone), Video binary, Description. Output: Lead record in Tradsiee backend via POST /submit-lead-data/{slug}.
-    // [AI_SIDE_EFFECT] Unsigned direct upload to Cloudinary (Single or Chunked based on size), XHR progress tracking, DOM manipulation for wizard state.
+    /* [SCRIPT_SPECIFICATION]
+       Handles the stateful orchestration of the lead-capture widget.
+       Manages local wizard navigation, Cloudinary media transmission, and backend persistence.
+    */
 
     const TS_API = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
         ? "http://127.0.0.1:8000"
         : window.location.origin;
 
-    // Use startup baked values, fallback to window global if injected by main.py
+    // Configuration resolution from environment injection.
     const TS_SLUG          = (new URLSearchParams(window.location.search)).get('slug') || window.TRADSIEE_SLUG || "[[SLUG_PLACEHOLDER]]";
     let TS_CLOUD_NAME    = "[[CLOUD_NAME]]";
     let TS_UPLOAD_PRESET = "[[UPLOAD_PRESET]]";
-
-    // CLEANUP: If replacements failed, set to empty so we can catch it
-    if (TS_CLOUD_NAME.startsWith("[["))   TS_CLOUD_NAME = window.TS_CLOUD_NAME || "";
-    if (TS_UPLOAD_PRESET.startsWith("[[")) TS_UPLOAD_PRESET = window.TS_UPLOAD_PRESET || "";
-
-    function tsLog(msg, data = null) {
-        const out = `[TRADSIEE-WIDGET] ${msg} ${data ? JSON.stringify(data) : ""}`;
-        console.log(out);
-        // Bubble up logs to parent if in iframe
-        if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'TRADSIEE_LOG', msg: out }, '*');
-        }
-    }
-
-    tsLog("Debug Info Initialized", { SLUG: TS_SLUG, CLOUD: TS_CLOUD_NAME, PRESET: TS_UPLOAD_PRESET });
 
     let tsFileToUpload  = null;
     let tsActiveXhr     = null;
     let tsUploadPromise = null;
     let tsUploadResult  = null;
 
-    /**
-     * [AI_INFO] Transitions the UI between wizard steps.
-     * [AI_FLOW] Toggles 'active' class on step containers and updates progress dot visual state.
-     */
+    /* [WIZARD_NAVIGATOR] 
+       Toggles active functional views and updates progress visual indicators.
+    */
     function tsGoStep(n) {
-        tsLog(`Navigating to Step ${n}`);
         document.querySelectorAll('.ts-step').forEach((s, i) => s.classList.toggle('active', i + 1 === n));
         document.querySelectorAll('.ts-progress-dot').forEach((d, i) => {
             d.classList.toggle('active', i + 1 === n);
@@ -233,202 +197,107 @@
         });
     }
 
-    /**
-     * [AI_INFO] Handles file selection and initiates the upload lifecycle.
-     * [AI_SIDE_EFFECT] Revokes/Creates Object URLs for video preview, triggers tsStartUpload().
-     */
+    /* [MEDIA_ACQUISITION_HANDLER] */
     function tsHandleFile(input) {
         tsFileToUpload = input.files[0];
         if (!tsFileToUpload) return;
-        tsLog("File Selected", { name: tsFileToUpload.name, size: (tsFileToUpload.size / (1024*1024)).toFixed(2) + "MB" });
         document.getElementById('ts-video-el').src = URL.createObjectURL(tsFileToUpload);
         document.getElementById('ts-video-preview').style.display = 'block';
-        document.getElementById('ts-upload-zone').classList.add('has-video');
         tsStartUpload();
     }
 
-    /**
-     * [AI_INFO] Standard single-stream XHR upload for smaller files.
-     * [AI_FLOW] Input: FormData with file and preset. Output: Cloudinary JSON response with secure_url.
-     */
-    function tsUploadSingle(fill, pct, status) {
+    /* [UPLOAD_STRATEGY: SINGLE_STREAM] */
+    function tsUploadSingle(fill, pct) {
         return new Promise((resolve, reject) => {
-            tsLog("Starting Single-Stream Upload...");
-            const startTime = Date.now();
-            
             const fd = new FormData();
             fd.append('file', tsFileToUpload);
             fd.append('upload_preset', TS_UPLOAD_PRESET);
-            fd.append('folder', 'tradsiee_leads');
-
             const xhr = new XMLHttpRequest();
             tsActiveXhr = xhr;
             xhr.open('POST', `https://api.cloudinary.com/v1_1/${TS_CLOUD_NAME}/video/upload`);
-
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
                     const p = Math.min(Math.round((e.loaded / e.total) * 100), 99);
                     fill.style.width = p + '%';
                     pct.textContent  = p + '%';
-                    if (p % 10 === 0) tsLog(`Upload Progress: ${p}%`);
                 }
             };
-            xhr.onload  = () => {
-                const duration = (Date.now() - startTime) / 1000;
-                tsLog(`Upload Finished in ${duration}s. Status: ${xhr.status}`);
-                if (xhr.status === 200) {
-                    resolve(JSON.parse(xhr.responseText));
-                } else {
-                    tsLog("Cloudinary ERROR", xhr.responseText);
-                    reject(xhr.responseText);
-                }
-            };
-            xhr.onerror = () => { tsLog("Network Error during upload."); reject('Network Error'); };
-            xhr.onabort = () => { tsLog("Upload aborted."); reject('abort'); };
+            xhr.onload = () => (xhr.status === 200) ? resolve(JSON.parse(xhr.responseText)) : reject();
+            xhr.onerror = () => reject();
             xhr.send(fd);
         });
     }
 
-    /**
-     * [AI_INFO] Chunked upload strategy for large assets (>95MB).
-     * [AI_FLOW] Splits file into 32MB chunks and sends sequentially with Content-Range headers.
-     * [AI_SIDE_EFFECT] Multiple sequential HTTP POST requests to Cloudinary.
-     */
+    /* [UPLOAD_STRATEGY: CHUNKED_STREAM] 
+       Supports large assets (>95MB) through sequential byte-range transmission.
+    */
     async function tsUploadChunked(fill, pct, status) {
-        const CHUNK = 32 * 1024 * 1024; // 32MB
+        const CHUNK = 32 * 1024 * 1024; 
         const total = tsFileToUpload.size;
         const count = Math.ceil(total / CHUNK);
         const uid   = Math.random().toString(36).substring(2, 15);
-        let lastRes = null;
-
-        tsLog(`Starting Chunked Upload (${count} parts)...`);
-        const totalStartTime = Date.now();
+        let res     = null;
 
         for (let i = 0; i < count; i++) {
             const start = i * CHUNK;
             const end   = Math.min(start + CHUNK, total);
-            const chunkStartTime = Date.now();
-
-            const fd = new FormData();
+            const fd    = new FormData();
             fd.append('file', tsFileToUpload.slice(start, end));
             fd.append('upload_preset', TS_UPLOAD_PRESET);
-            fd.append('folder', 'tradsiee_leads');
 
-            tsLog(`Pushing Part ${i+1}/${count}...`);
-
-            lastRes = await new Promise((resolve, reject) => {
+            res = await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 tsActiveXhr = xhr;
                 xhr.open('POST', `https://api.cloudinary.com/v1_1/${TS_CLOUD_NAME}/video/upload`);
                 xhr.setRequestHeader('X-Unique-Upload-Id', uid);
                 xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${total}`);
-
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
                         const p = Math.min(Math.round(((start + e.loaded) / total) * 100), 99);
-                        fill.style.width   = p + '%';
-                        pct.textContent    = p + '%';
-                        status.textContent = `Pushing 4K Part ${i + 1} of ${count}…`;
+                        fill.style.width = p + '%';
+                        pct.textContent  = p + '%';
+                        status.textContent = `Processing part ${i+1}/${count}...`;
                     }
                 };
-                xhr.onload  = () => {
-                    const chunkDuration = (Date.now() - chunkStartTime) / 1000;
-                    tsLog(`Part ${i+1} finished in ${chunkDuration}s`);
-                    if (xhr.status === 200) {
-                        resolve(JSON.parse(xhr.responseText));
-                    } else {
-                        tsLog(`Part ${i+1} ERROR`, xhr.responseText);
-                        reject(xhr.responseText);
-                    }
-                };
-                xhr.onerror = () => reject('Network Error');
-                xhr.onabort = () => reject('abort');
+                xhr.onload = () => (xhr.status === 200) ? resolve(JSON.parse(xhr.responseText)) : reject();
+                xhr.onerror = () => reject();
                 xhr.send(fd);
             });
         }
-        
-        const totalDuration = (Date.now() - totalStartTime) / 1000;
-        tsLog(`Total Chunked Upload took ${totalDuration}s`);
-        return lastRes;
+        return res;
     }
 
-    /**
-     * [AI_INFO] Orchestrates the upload process, selecting between single and chunked strategies.
-     * [AI_FLOW] Validates config, prepares UI progress bars, and executes the selected upload promise.
-     */
+    /* [UPLOAD_ORCHESTRATOR] */
     async function tsStartUpload() {
         if (!tsFileToUpload) return;
-        
-        // Configuration Check
-        if (!TS_CLOUD_NAME || !TS_UPLOAD_PRESET) {
-            const err = "Configuration Error: Cloudinary settings are missing. Please restart your server.";
-            tsLog(err);
-            alert(err);
-            return;
-        }
-
-        if (tsActiveXhr) { tsActiveXhr.abort(); tsActiveXhr = null; }
-        tsUploadResult = null;
-
-        const fill   = document.getElementById('ts-progress-fill');
-        const pct    = document.getElementById('ts-progress-pct');
+        if (tsActiveXhr) tsActiveXhr.abort();
+        const fill = document.getElementById('ts-progress-fill');
+        const pct  = document.getElementById('ts-progress-pct');
         const status = document.getElementById('ts-progress-status');
-
         document.getElementById('ts-upload-progress').style.display = 'block';
-        fill.style.width   = '0%';
-        fill.classList.remove('done', 'error');
-        pct.textContent    = '0%';
-        status.textContent = 'Uploading…';
-
+        
         tsUploadPromise = (async () => {
             const result = tsFileToUpload.size > 95 * 1024 * 1024
                 ? await tsUploadChunked(fill, pct, status)
-                : await tsUploadSingle(fill, pct, status);
-
-            tsUploadResult     = result;
-            fill.style.width   = '100%';
-            pct.textContent    = '100%';
-            fill.classList.add('done');
-            status.textContent = 'Video ready!';
-            tsLog("Secure URL received", result.secure_url);
+                : await tsUploadSingle(fill, pct);
+            tsUploadResult = result;
+            fill.style.width = '100%';
+            pct.textContent = '100%';
+            status.textContent = 'Ready!';
             return result;
-        })().catch(err => {
-            tsLog("Final Upload Promise FAILED", err);
-            if (err !== 'abort') {
-                fill.classList.add('error');
-                status.textContent = 'Upload failed. Please re-select video.';
-            }
-            tsActiveXhr = null;
-            throw err;
-        });
+        })();
     }
 
-    /**
-     * [AI_INFO] Finalizes the lead submission by sending all collected data to the Tradsiee backend.
-     * [AI_FLOW] 1. Awaits pending upload promise. 2. Aggregates identity + video_url + description. 3. POSTs to /submit-lead-data.
-     * [AI_SIDE_EFFECT] Disables UI to prevent double-submission, updates step to terminal success (3).
-     */
+    /* [LEAD_PERSISTENCE_TRANSACTION] 
+       Submits aggregated lead data to the backend API.
+    */
     async function tsSubmit() {
-        if (!tsFileToUpload) return alert('Please record or select a video first.');
-
-        const btn     = document.getElementById('ts-submit-btn');
-        const label   = document.getElementById('ts-btn-label');
-        const spinner = document.getElementById('ts-spinner');
-
-        tsLog("Submit Clicked. Waiting for upload completion...");
-
-        btn.disabled          = true;
-        label.textContent     = 'Processing…';
-        spinner.style.display = 'block';
-
+        if (!tsFileToUpload) return;
+        const btn = document.getElementById('ts-submit-btn');
+        btn.disabled = true;
+        document.getElementById('ts-spinner').style.display = 'block';
         try {
-            if (!tsUploadResult) {
-                tsLog("Upload still in progress, waiting...");
-                label.textContent = 'Finishing upload…';
-                await tsUploadPromise;
-            }
-
-            tsLog("Upload finished. Saving lead to backend...");
+            if (!tsUploadResult) await tsUploadPromise;
             const res = await fetch(`${TS_API}/submit-lead-data/${TS_SLUG}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -440,19 +309,11 @@
                     last_name:            document.getElementById('ts-last').value
                 })
             });
-
-            if (!res.ok) throw new Error('Failed to save lead');
-            tsLog("Lead saved successfully. Done.");
-            tsGoStep(3);
-        } catch (err) {
-            tsLog("tsSubmit FAILED", err);
-            alert('Something went wrong. Please check your connection and try again.');
-            btn.disabled          = false;
-            label.textContent     = 'Send My Request';
-            spinner.style.display = 'none';
-        }
+            if (res.ok) tsGoStep(3);
+        } catch (e) { alert('Submission failed. Please try again.'); }
+        btn.disabled = false;
+        document.getElementById('ts-spinner').style.display = 'none';
     }
 </script>
 </body>
-</html></body>
 </html>

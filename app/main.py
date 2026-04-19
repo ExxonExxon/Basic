@@ -1,12 +1,24 @@
-# [AI_INFO] Tradsiee Engine v1.2 - Core FastAPI Backend.
-# [AI_FLOW] This service acts as the central hub for:
-#         1. Tradie registration and authentication (Supabase Auth).
-#         2. Lead management and status updates (Supabase Database).
-#         3. Video upload coordination (Cloudinary).
-#         4. SMS notifications and verification (Twilio).
-#         5. HTML template serving with dynamic injection.
-# [AI_CONSTRAINT] Requires Supabase URL/Key, Twilio SID/Token, and Cloudinary Config in .env.
-# [AI_SIDE_EFFECT] Modifies Supabase 'tradies' and 'leads' tables. Sends SMS via Twilio.
+# [ENGINE_SPECIFICATION]
+# Tradsiee Engine v1.2 - Core FastAPI Backend.
+# This service acts as the central orchestration hub for the Tradsiee platform, handling 
+# multi-tenant tradie logic, lead ingestion, and secure media coordination.
+
+# [SYSTEM_ARCHITECTURE_FLOW]
+# 1. Identity & Access: Manages Tradie registration, SMS-based verification, and JWT-secured login via Supabase.
+# 2. Lead Lifecycle: Ingests lead data from client-side widgets, stores it in Supabase, and manages status transitions.
+# 3. Media Coordination: Facilitates secure video uploads by providing the necessary configuration for Cloudinary.
+# 4. Outbound Communications: Dispatches real-time SMS alerts to Tradies and confirmation messages to customers via Twilio.
+# 5. Template Engine: Dynamically renders, minifies, and caches HTML pages with environment-specific variable injection.
+
+# [SYSTEM_CONSTRAINTS]
+# Execution requires a valid .env configuration containing:
+# - Supabase: Project URL and Secret Key (Service Role for admin tasks).
+# - Twilio: Account SID, Auth Token, and Messaging Service SID.
+# - Cloudinary: Cloud Name, API Key, and Secret for media signing.
+
+# [STATE_MUTATION_DETAILS]
+# Operations in this service directly modify the 'tradies' and 'leads' tables in the Supabase PostgreSQL database.
+# SMS dispatch via Twilio represents an external side-effect that consumes credits and impacts external system state.
 
 import logging
 import os
@@ -33,31 +45,38 @@ from pydantic import BaseModel, constr, EmailStr
 from supabase import Client, create_client
 from twilio.rest import Client as TwilioClient
 
-# [AI_INFO] Environment variables are loaded first. Critical for all service clients.
+# [BOOTSTRAP_SEQUENCE]
+# Load environment variables into the process before initializing any service clients.
 load_dotenv()
 
+# [OBSERVABILITY_SETUP]
+# Standardized logging configuration to ensure traceability of system events across threads.
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("tradsiee-engine")
 
-# [AI_CONSTRAINT] FRONTEND_URL is used for password reset redirection.
+# [ENVIRONMENT_VARS_RESOLUTION]
+# API_BASE_URL: The external-facing endpoint of this backend (used for loader scripts).
+# FRONTEND_URL: The root URL of the dashboard/portal (used for password reset redirection).
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
 
-# [AI_INFO] Twilio Client initialization.
-# [AI_CONSTRAINT] TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be valid.
+# [CLIENT_INITIALIZATION: TWILIO]
+# Establishes the connection to the Twilio REST API for SMS orchestration.
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TEFLON_SERVICE_SID = os.getenv("TWILIO_MESSAGING_SERVICE_SID")
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) if TWILIO_ACCOUNT_SID else None
 
-# [AI_INFO] Supabase Client initialization.
-# [AI_SIDE_EFFECT] supabase_admin uses the same key, but is intended for bypass-RLS operations where needed.
+# [CLIENT_INITIALIZATION: SUPABASE]
+# supabase: standard client for user-authenticated operations.
+# supabase_admin: elevated client used for backend-only operations (e.g., verifying phone codes).
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# [AI_INFO] Cloudinary configuration for widget asset management and video processing.
+# [CLIENT_INITIALIZATION: CLOUDINARY]
+# Configures the multimedia SDK for secure asset management.
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_NAME"),
     api_key=os.getenv("CLOUDINARY_API_KEY"),
@@ -65,10 +84,12 @@ cloudinary.config(
     secure=True,
 )
 
-# [AI_INFO] In-memory state for non-persistent or transient data.
-# [AI_FLOW] pending_registrations stores profile data between /register and /verify-code.
-# [AI_FLOW] verification_codes stores 6-digit SMS codes.
-# [AI_FLOW] HTML_PAGES_CACHE stores pre-processed HTML with injected environment paths.
+# [TRANSIENT_MEMORY_STATE]
+# Volatile storage for data that does not require long-term persistence or is in a 'waiting' state.
+# pending_registrations: Stores temporary user profile data during the MFA verification window.
+# verification_codes: Maps phone numbers to active 6-digit OTP codes.
+# WIDGET_TEMPLATE_CACHE: Pre-processed HTML for the embedded widget.
+# HTML_PAGES_CACHE: Pre-processed and minified strings for application pages.
 pending_registrations: Dict[str, Any] = {}
 verification_codes: Dict[str, str] = {}
 WIDGET_TEMPLATE_CACHE: Optional[str] = None
@@ -76,11 +97,12 @@ HTML_PAGES_CACHE: Dict[str, str] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # [AI_FLOW] Startup: Validates environment, processes and caches HTML templates.
-    # [AI_CONSTRAINT] Fails gracefully but logs errors if templates or env vars are missing.
+    # [STARTUP_PROCEDURES]
+    # Executed on application boot. Validates the environment and prepares the template cache.
+    # This prevents expensive disk I/O operations during active request handling.
     global WIDGET_TEMPLATE_CACHE, HTML_PAGES_CACHE
     try:
-        # 1. Required environment check
+        # 1. Integrity Check: Verify all required environmental secrets are loaded.
         required_env = [
             "CLOUDINARY_NAME", "CLOUDINARY_UPLOAD_PRESET",
             "SUPABASE_URL", "SUPABASE_KEY",
@@ -88,12 +110,12 @@ async def lifespan(app: FastAPI):
         ]
         missing = [key for key in required_env if not os.getenv(key)]
         if missing:
-            logger.error(f"CRITICAL: Missing environment variables: {', '.join(missing)}")
+            logger.error(f"CRITICAL_FAILURE: Missing required environment variables: {', '.join(missing)}")
 
         cloud_name = os.getenv("CLOUDINARY_NAME", "")
         upload_preset = os.getenv("CLOUDINARY_UPLOAD_PRESET", "")
         
-        # 2. Configurable Paths for UI
+        # 2. Path Resolution: Maps internal placeholder strings to their configured public routes.
         ui_paths = {
             "[[PATH_LOGIN]]": os.getenv("PATH_LOGIN", "/login"),
             "[[PATH_SIGNUP]]": os.getenv("PATH_SIGNUP", "/signup"),
@@ -103,31 +125,34 @@ async def lifespan(app: FastAPI):
         }
 
         def process_html(filename: str, is_widget: bool = False) -> str:
-            # [AI_FLOW] Reads HTML, minifies, and replaces placeholders with env-derived paths.
+            # [TEMPLATE_PROCESSING_LOGIC]
+            # Performs a surgical read, light minification, and placeholder replacement 
+            # to prepare static HTML templates for dynamic serving.
             path = os.path.join("web", "templates", filename)
             if not os.path.exists(path):
-                logger.warning(f"File not found: {path}")
+                logger.warning(f"ASSET_NOT_FOUND: Template file {path} is missing from the filesystem.")
                 return ""
             with open(path, "r") as f:
                 content = f.read()
             
-            # Minify slightly
+            # Minification Strategy: Remove redundant whitespace between HTML elements.
             content = re.sub(r'>\s+<', '><', content)
             
-            # Replace common placeholders
+            # Injection: Replace navigation placeholders with actual environment-defined paths.
             for placeholder, value in ui_paths.items():
                 content = content.replace(placeholder, value)
             
+            # Widget Injection: Specifically inject Cloudinary credentials for direct-to-cloud uploads.
             if is_widget:
                 content = content.replace('[[CLOUD_NAME]]', cloud_name)
                 content = content.replace('[[UPLOAD_PRESET]]', upload_preset)
             
             return content
 
-        # Cache widget
+        # Warm the cache for the widget UI (index.html).
         WIDGET_TEMPLATE_CACHE = process_html("index.html", is_widget=True)
         
-        # Cache other pages
+        # Warm the cache for all administrative and dashboard pages.
         pages = {
             "login": "login.html",
             "signup": "signup.html",
@@ -138,9 +163,9 @@ async def lifespan(app: FastAPI):
         for key, filename in pages.items():
             HTML_PAGES_CACHE[key] = process_html(filename)
             
-        logger.info(f"HTML pages successfully cached: {', '.join(HTML_PAGES_CACHE.keys())}")
+        logger.info(f"TEMPLATE_CACHE_LOADED: Caching complete for keys: {', '.join(HTML_PAGES_CACHE.keys())}")
     except Exception as e:
-        logger.error(f"Startup error: {e}")
+        logger.error(f"STARTUP_EXCEPTION: Initialization failed with error: {e}")
     yield
 
 app = FastAPI(title="Tradsiee_Engine_v1.2", lifespan=lifespan)
@@ -148,8 +173,10 @@ security = HTTPBearer()
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    # [AI_INFO] Catch-all for unhandled exceptions to prevent leaking stack traces.
-    logger.error(f"Global exception: {exc}", exc_info=True)
+    # [GLOBAL_ERROR_TRAP]
+    # Prevents sensitive system state (stack traces) from leaking to the client 
+    # while ensuring all failures are logged for internal auditing.
+    logger.error(f"UNHANDLED_SYSTEM_EXCEPTION: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal server error occurred. Our team has been notified."}
@@ -157,13 +184,16 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    # [AI_INFO] Standardizes HTTP error responses.
+    # [CONTROLLED_ERROR_NORMALIZATION]
+    # Ensures all expected HTTP errors follow a consistent response structure.
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail}
     )
 
-# [AI_CONSTRAINT] Wildcard CORS enabled for widget embedding.
+# [CORS_MIDDLEWARE_CONFIGURATION]
+# Implements permissive Cross-Origin Resource Sharing (CORS) to allow the Tradsiee widget 
+# to be embedded and functional on any 3rd party website.
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=".*",
@@ -173,7 +203,8 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# [AI_INFO] Data Schemas for validation.
+# [DATA_VALIDATION_MODELS]
+# Pydantic schemas for enforcing structural integrity on all inbound API payloads.
 class ForgotPasswordSchema(BaseModel):
     email: EmailStr
 
@@ -181,7 +212,8 @@ class ResetPasswordSchema(BaseModel):
     new_password: constr(min_length=8)
 
 class LeadData(BaseModel):
-    # [AI_FLOW] Shape of lead submission from the widget.
+    # [LEAD_PAYLOAD_STRUCTURE]
+    # Defines the data expected from the lead-generation widget.
     video_url: str
     customer_phone: str
     customer_description: constr(max_length=1000) = "No description"
@@ -189,19 +221,24 @@ class LeadData(BaseModel):
     last_name: str = ""
 
 async def run_sync(func, *args, **kwargs):
-    # [AI_INFO] Utility for running blocking Supabase/Twilio calls in threads.
+    # [ASYNC_SYNC_BRIDGE]
+    # Offloads blocking SDK calls (Supabase, Twilio) to an external thread pool 
+    # to maintain high concurrency in the main event loop.
     return await asyncio.to_thread(func, *args, **kwargs)
 
 def format_phone(phone: str) -> str:
-    # [AI_FLOW] Normalizes phone numbers to E.164 (defaulting to +61 Australia).
+    # [PHONE_NORMALIZATION_LOGIC]
+    # Converts various phone input formats into a standardized E.164 string.
+    # Defaults to the Australian (+61) prefix if no leading country code is detected.
     clean_phone = re.sub(r"[^\d]", "", phone)
     if not phone.startswith("+"):
         return f"+61{clean_phone.lstrip('0')}"
     return f"+{clean_phone}"
 
 async def generate_unique_slug(name: str) -> str:
-    # [AI_FLOW] Creates a unique URL slug for the tradie business.
-    # [AI_SIDE_EFFECT] Queries Supabase 'tradies' table to check for collisions.
+    # [IDENTITY_SLUG_GENERATION]
+    # Creates a unique, URL-safe business identifier.
+    # Recursively checks for collisions in the 'tradies' table to ensure global uniqueness.
     base = re.sub(r"[^a-zA-Z0-9]", "-", name.lower()).strip("-")
     for _ in range(5):
         suffix = random.randint(1000, 9999)
@@ -212,9 +249,9 @@ async def generate_unique_slug(name: str) -> str:
     return f"{base}-{random.getrandbits(32)}"
 
 async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security)):
-    # [AI_INFO] Dependency for routes requiring a logged-in user.
-    # [AI_FLOW] Input: Bearer token (JWT). Output: Supabase User object.
-    # [AI_CONSTRAINT] Requires valid Supabase JWT in Authorization header.
+    # [AUTHENTICATION_GUARD]
+    # Dependency injected into protected routes to verify the requester's identity.
+    # Uses Supabase's built-in JWT verification to validate session tokens.
     if not auth or not auth.credentials or auth.credentials == "null":
         raise HTTPException(status_code=401, detail="Session required.")
     try:
@@ -224,14 +261,14 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
             raise HTTPException(status_code=401, detail="Invalid session.")
         return user
     except Exception as e:
-        logger.error(f"Auth error: {e}")
+        logger.error(f"AUTH_VERIFICATION_FAILURE: {e}")
         raise HTTPException(status_code=401, detail="Authentication failed.")
 
 @app.post("/register")
 async def register_tradie(data: dict):
-    # [AI_INFO] Step 1 of Tradie Sign-up.
-    # [AI_FLOW] Creates Supabase Auth user and stores profile in memory (pending_registrations).
-    # [AI_SIDE_EFFECT] Triggers Supabase Auth sign_up.
+    # [REGISTRATION_PIPELINE: STEP 1]
+    # Initializes the user account in Supabase Auth and generates the unique business profile.
+    # Holds data in volatile memory (pending_registrations) until phone verification is complete.
     name, email, password, phone = data.get("business_name"), data.get("email"), data.get("password"), data.get("phone_number")
     if not all([name, email, password, phone]):
         raise HTTPException(status_code=400, detail="Missing data.")
@@ -252,14 +289,14 @@ async def register_tradie(data: dict):
         pending_registrations[formatted_phone] = profile_data
         return {"status": "success", "slug": new_slug}
     except Exception as e:
-        logger.error(f"Reg error: {e}")
+        logger.error(f"REGISTRATION_FAILURE: {e}")
         raise HTTPException(status_code=400, detail="Registration failed.")
 
 @app.post("/login")
 async def login(data: dict):
-    # [AI_INFO] Tradie Login.
-    # [AI_FLOW] Input: email, password. Output: access_token, slug.
-    # [AI_SIDE_EFFECT] Authenticates with Supabase. Fetches slug from 'tradies' table.
+    # [AUTHENTICATION_PIPELINE]
+    # Validates credentials against Supabase and retrieves the associated business slug.
+    # Returns the access_token (JWT) required for all subsequent state-mutating requests.
     email, password = data.get("email"), data.get("password")
     try:
         auth_res = await run_sync(supabase.auth.sign_in_with_password, {"email": email, "password": password})
@@ -272,14 +309,14 @@ async def login(data: dict):
 
         return {"slug": res.data[0]["slug"], "access_token": auth_res.session.access_token}
     except Exception as e:
-        logger.error(f"Login error: {e}")
+        logger.error(f"LOGIN_FAILURE: {e}")
         raise HTTPException(status_code=401, detail="Invalid credentials.")
 
 @app.post("/send-verification")
 async def send_verification(data: dict):
-    # [AI_INFO] Sends SMS verification code via Twilio.
-    # [AI_FLOW] Stores code in verification_codes map.
-    # [AI_SIDE_EFFECT] Sends SMS via Twilio Messaging Service.
+    # [MFA_CHALLENGE_DISPATCH]
+    # Dispatches a random 6-digit verification code via Twilio SMS.
+    # This code is required to finalize the registration and move profile data from memory to DB.
     phone = data.get("phone")
     if not phone: raise HTTPException(status_code=400, detail="Phone required.")
     
@@ -295,15 +332,15 @@ async def send_verification(data: dict):
                 to=formatted_phone
             )
         except Exception as e:
-            logger.error(f"SMS failed: {e}")
+            logger.error(f"SMS_DISPATCH_FAILURE: {e}")
             raise HTTPException(status_code=500, detail="SMS failed.")
     return {"status": "success"}
 
 @app.post("/verify-code")
 async def verify_code(data: dict):
-    # [AI_INFO] Finalizes registration by verifying the SMS code.
-    # [AI_FLOW] If valid, moves profile from memory to Supabase 'tradies' table.
-    # [AI_SIDE_EFFECT] Deletes code from memory. Inserts row into 'tradies'.
+    # [REGISTRATION_PIPELINE: STEP 2]
+    # Confirms the MFA code. On success, the tradie's business profile is officially 
+    # persisted into the Supabase database and purged from volatile memory.
     phone, code = data.get("phone"), data.get("code")
     formatted_phone = format_phone(phone)
     if verification_codes.get(formatted_phone) != code:
@@ -318,14 +355,18 @@ async def verify_code(data: dict):
 
 @app.get("/get-leads/{slug}")
 async def get_leads(slug: str, limit: int = 50, offset: int = 0, user=Depends(get_current_user)):
-    # [AI_INFO] Fetches leads for a specific tradie.
-    # [AI_FLOW] Input: slug. Output: List of lead objects.
-    # [AI_CONSTRAINT] Tradie ID must match the logged-in User ID.
+    """
+    Retrieves the lead pipeline for a specific business workspace.
+    
+    1. Validates the existence of the business slug.
+    2. Enforces ownership: Ensuring the authenticated user matches the slug owner.
+    3. Fetches a paginated list of leads sorted by creation date.
+    """
     tradie_res = await run_sync(supabase_admin.table("tradies").select("id, business_name, credits").eq("slug", slug).single().execute)
     if not tradie_res.data: raise HTTPException(status_code=404, detail="Not found.")
 
     tradie = tradie_res.data
-    if tradie["id"] != user.id: raise HTTPException(status_code=403, detail="Unauthorized.")
+    if tradie["id"] != user.id: raise HTTPException(status_code=403, detail="Unauthorized access attempt.")
 
     leads_res = await run_sync(
         supabase_admin.table("leads")
@@ -336,9 +377,13 @@ async def get_leads(slug: str, limit: int = 50, offset: int = 0, user=Depends(ge
 
 @app.post("/submit-lead-data/{slug}")
 async def submit_lead_data(slug: str, data: LeadData, background_tasks: BackgroundTasks):
-    # [AI_INFO] Endpoint for the widget to submit customer lead data.
-    # [AI_FLOW] Input: LeadData (video_url, phone, desc). Output: status.
-    # [AI_SIDE_EFFECT] Inserts lead into Supabase. Triggers background SMS notifications.
+    """
+    Ingests new lead data from the client-side widget.
+    
+    1. Resolves the target business identity.
+    2. Normalizes and persists the lead metadata in the database.
+    3. Offloads SMS notifications (Tradie alert & Customer confirmation) to background tasks.
+    """
     tradie_res = await run_sync(supabase_admin.table("tradies").select("id, phone_number, business_name").eq("slug", slug).single().execute)
     if not tradie_res.data: raise HTTPException(status_code=404, detail="Not found.")
 
@@ -350,6 +395,7 @@ async def submit_lead_data(slug: str, data: LeadData, background_tasks: Backgrou
     
     await run_sync(supabase_admin.table("leads").insert(lead_data).execute)
     
+    # Asynchronous Notification: Notifies both parties without blocking the widget's UI response.
     background_tasks.add_task(
         send_lead_notifications, 
         tradie["phone_number"], data.customer_phone, data.customer_description, tradie["business_name"]
@@ -358,7 +404,8 @@ async def submit_lead_data(slug: str, data: LeadData, background_tasks: Backgrou
 
 @app.get("/widget-bundle.js")
 async def get_widget_bundle():
-    # [AI_INFO] Serves the static widget JS bundle with aggressive caching.
+    # [STATIC_LOGIC_DISPATCH]
+    # Serves the compiled widget bundle with aggressive caching headers.
     path = os.path.join("web", "static", "widget-bundle.js")
     if os.path.exists(path):
         return FileResponse(
@@ -370,8 +417,9 @@ async def get_widget_bundle():
 
 @app.get("/loader.js")
 async def loader_js(request: Request, slug: str):
-    # [AI_INFO] Dynamically generates the JS snippet for embedding the widget on 3rd party sites.
-    # [AI_FLOW] Injects the slug and origin into a self-executing script.
+    # [WIDGET_INJECTION_LOGIC]
+    # Generates a dynamic JS loader used by 3rd party sites to embed the Tradsiee iframe.
+    # Injects the specific business 'slug' to ensure the correct context is loaded.
     origin = f"{request.url.scheme}://{request.url.netloc}"
     js = f"""
 (function() {{
@@ -411,18 +459,20 @@ async def loader_js(request: Request, slug: str):
 
 @app.get("/widget/{slug}", response_class=HTMLResponse)
 async def get_widget_ui(slug: str):
-    # [AI_INFO] Serves the widget UI (index.html) with slug replacement.
+    # [WIDGET_HTML_PROVIDER]
+    # Serves the widget's internal UI, loading the template from memory cache 
+    # and injecting the active business slug for data routing.
     content = WIDGET_TEMPLATE_CACHE or "Template missing."
     c_name = os.getenv("CLOUDINARY_NAME", "MISSING")
     u_preset = os.getenv("CLOUDINARY_UPLOAD_PRESET", "MISSING")
-    logger.info(f"Serving widget for {slug} | Cloud: {c_name} | Preset: {u_preset}")
-    return content.replace('[[SLUG_PLACEHOLDER]]', slug)
+    logger.info(f"WIDGET_SERVED: slug={slug} | cloudinary={c_name}")
+    return content.replace('[[SLUG_PLACE_HOLDER]]', slug)
 
 @app.patch("/update-lead-status/{lead_id}")
 async def update_lead_status(lead_id: str, data: dict, user=Depends(get_current_user)):
-    # [AI_INFO] Allows tradies to update lead status (e.g., 'contacted', 'archived').
-    # [AI_SIDE_EFFECT] Updates 'leads' table in Supabase.
-    # [AI_CONSTRAINT] Lead must belong to the logged-in tradie.
+    # [PIPELINE_STATE_TRANSITION]
+    # Updates a lead's position in the Kanban board (pending -> contacted -> archived).
+    # Verifies that the lead actually belongs to the authenticated user's workspace.
     status = data.get("status")
     if not status: raise HTTPException(status_code=400, detail="Status required.")
     
@@ -435,19 +485,21 @@ async def update_lead_status(lead_id: str, data: dict, user=Depends(get_current_
 
 @app.post("/forgot-password")
 async def forgot_password(data: ForgotPasswordSchema):
-    # [AI_INFO] Triggers Supabase password reset email.
-    # [AI_SIDE_EFFECT] Sends email via Supabase Auth.
+    # [PASSWORD_RECOVERY_GATEWAY]
+    # Initiates a password reset via Supabase Auth, sending a secure recovery email 
+    # that redirects to the portal's update-password route.
     try:
         path_update = os.getenv("PATH_UPDATE_PWD", "/update-password")
         await run_sync(supabase.auth.reset_password_for_email, data.email, {"redirect_to": f"{FRONTEND_URL}{path_update}"})
         return {"status": "success"}
     except Exception as e:
-        logger.error(f"Forgot pwd error: {e}")
+        logger.error(f"PASSWORD_RESET_FAILURE: {e}")
         raise HTTPException(status_code=400, detail="Failed to send reset link.")
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_home():
-    # [AI_INFO] Serves cached login page as home.
+    # [PAGE_ROUTER: HOME]
+    # Serves the primary landing/login experience.
     return HTML_PAGES_CACHE.get("login", "Page missing.")
 
 @app.get(os.getenv("PATH_LOGIN", "/login"), response_class=HTMLResponse)
@@ -472,18 +524,20 @@ async def serve_preview():
 
 @app.post("/update-password")
 async def update_password(data: ResetPasswordSchema, user=Depends(get_current_user)):
-    # [AI_INFO] Updates password for the current user.
-    # [AI_SIDE_EFFECT] Modifies Supabase Auth user record.
+    # [ACCOUNT_STATE_MUTATION]
+    # Directly updates the user's password in the Supabase Auth database.
     try:
         await run_sync(supabase.auth.update_user, {"password": data.new_password})
         return {"status": "success"}
     except Exception as e:
-        logger.error(f"Update pwd error: {e}")
+        logger.error(f"PASSWORD_ROTATION_FAILURE: {e}")
         raise HTTPException(status_code=400, detail="Failed to update password.")
 
 @app.post("/send-delete-code")
 async def send_delete_code(user=Depends(get_current_user)):
-    # [AI_INFO] Sends a deletion confirmation code via SMS.
+    # [DESTRUCTIVE_ACTION_MFA]
+    # Issues a confirmation code via SMS before allowing account deletion.
+    # Acts as a critical high-friction security gate.
     res = await run_sync(supabase_admin.table("tradies").select("phone_number").eq("id", user.id).single().execute)
     if not res.data: raise HTTPException(status_code=404, detail="Profile not found.")
     
@@ -499,14 +553,15 @@ async def send_delete_code(user=Depends(get_current_user)):
                 to=phone
             )
         except Exception as e:
-            logger.error(f"SMS failed: {e}")
+            logger.error(f"DELETION_SMS_FAILURE: {e}")
             raise HTTPException(status_code=500, detail="SMS failed.")
     return {"status": "success"}
 
 @app.delete("/delete-account/{slug}")
 async def delete_account(slug: str, code: str, user=Depends(get_current_user)):
-    # [AI_INFO] Deletes tradie account and auth record.
-    # [AI_SIDE_EFFECT] Deletes from 'tradies' table and Supabase Auth.
+    # [ACCOUNT_TERMINATION_LOGIC]
+    # Performs permanent deletion of the business profile and auth record.
+    # Side Effects: Deletes rows from 'leads', 'tradies', and removes user from Supabase Auth.
     if verification_codes.get(f"DEL_{user.id}") != code:
         raise HTTPException(status_code=400, detail="Invalid code.")
     
@@ -521,21 +576,29 @@ async def delete_account(slug: str, code: str, user=Depends(get_current_user)):
             del verification_codes[f"DEL_{user.id}"]
         return {"status": "success"}
     except Exception as e:
-        logger.error(f"Delete error: {e}")
+        logger.error(f"DELETION_FAILURE: {e}")
         raise HTTPException(status_code=500, detail="Deletion failed.")
 
 @app.get("/health")
-def health(): return {"status": "online", "version": "1.2.0"}
+def health(): 
+    # [SYSTEM_STATUS_PROBE]
+    # Simple heartbeat endpoint for health checks and deployment verification.
+    return {"status": "online", "version": "1.2.0"}
 
 def send_lead_notifications(tradie_phone: str, customer_phone: str, description: str, biz_name: str):
-    # [AI_INFO] Background task to notify both tradie and customer.
-    # [AI_FLOW] Sends SMS to tradie with lead info and to customer as confirmation.
-    # [AI_SIDE_EFFECT] Two SMS messages sent via Twilio.
+    # [COMMUNICATIONS_WORKER]
+    # Orchestrates SMS delivery for new lead events. 
+    # Dispatched as a background task to keep API response times low.
     if not twilio_client: return
     t_phone, c_phone = format_phone(tradie_phone), format_phone(customer_phone)
     try:
+        # Outbound Alert: Tradie
         twilio_client.messages.create(messaging_service_sid=TEFLON_SERVICE_SID, to=t_phone,
             body=f"TRADSIEE: New lead! {c_phone}\nDesc: {description[:30]}...\nView: {FRONTEND_URL}/portal.html")
+        # Outbound Confirmation: Customer
         twilio_client.messages.create(messaging_service_sid=TEFLON_SERVICE_SID, to=c_phone,
             body=f"Sent! {biz_name} has received your video.")
-    except Exception as e: logger.error(f"Notification error: {e}")
+    except Exception as e: logger.error(f"NOTIFICATION_PIPELINE_FAILURE: {e}")
+
+LINE_FAILURE: {e}")
+

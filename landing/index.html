@@ -1,3 +1,32 @@
+<!-- 
+[LANDING_EXPERIENCE_SPECIFICATION]
+This file implements the primary marketing and customer acquisition engine for the Tradsiee platform.
+It is architected as a high-fidelity, conversion-optimized landing page following modern 'Apple-style' 
+design aesthetics (Glassmorphism, high-contrast typography, and smooth scroll transitions).
+
+[ARCHITECTURAL_PRINCIPLES]
+1. Visual Orchestration: Employs Tailwind CSS for utility-first layout management and custom 
+   CSS for advanced visual effects (blur filters, gradients, and keyframe animations).
+2. Navigation Architecture: Implements a sticky, glassmorphic navigation bar with 
+   dynamic opacity transitions.
+3. Conversion Funnel: Strategically places high-friction CTAs (Call to Action) throughout 
+   the scroll depth to maximize Tradie sign-ups.
+4. Product Visualization: Uses a simulated 'Dashboard Preview' to provide immediate 
+   functional context without requiring an active session.
+
+[UX_PATTERNS]
+- Responsive Grid: Adapts from a multi-column desktop view to a single-column mobile-first 
+  layout using Tailwind breakpoints.
+- Interactive Feedback: Incorporates hover-triggered scale transforms and smooth internal 
+  link anchoring (#features, #how-it-works).
+- Sensory Cues: Uses 'ambient orbs' and 'grid textures' to provide depth and professional polish.
+
+[TECHNICAL_COMPONENTS]
+- Navigation: Fixed position, glassmorphism (backdrop-filter).
+- Hero: Large-scale typography with gradient masks.
+- Features: Icon-based value proposition grid.
+- CTA: High-contrast section with skewed background transformations.
+-->
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
@@ -7,6 +36,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* [DESIGN_SYSTEM_TOKEN_OVERRIDES] */
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #fbfbfd;
@@ -43,7 +73,7 @@
 </head>
 <body class="antialiased">
 
-    <!-- Navigation -->
+    <!-- [UI_COMPONENT: PRIMARY_NAVIGATION] -->
     <nav class="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl z-50 transition-all duration-500">
         <div class="glass border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-full px-8 h-14 flex items-center justify-between">
             <div class="flex items-center gap-10">
@@ -64,7 +94,7 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    <!-- [UI_COMPONENT: HERO_SECTION] -->
     <section class="relative pt-32 pb-20 overflow-hidden">
         <div class="max-w-5xl mx-auto px-6 text-center">
             <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 animate-fade-in">
@@ -81,7 +111,7 @@
                 </a>
             </div>
 
-            <!-- Dashboard Preview -->
+            <!-- Dashboard Preview Illustration -->
             <div class="relative max-w-4xl mx-auto">
                 <div class="bg-gray-200 rounded-2xl p-2 hero-image-shadow">
                     <div class="bg-white rounded-xl overflow-hidden aspect-video relative flex items-center justify-center border border-gray-100">
@@ -94,24 +124,11 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Floating Elements -->
-                <div class="absolute -top-6 -left-6 hidden lg:block glass p-4 rounded-2xl shadow-xl border border-gray-200/50 animate-bounce-slow">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase">New Lead</p>
-                            <p class="text-sm font-bold">Kitchen Leak — 2:15m video</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
+    <!-- [UI_COMPONENT: FEATURES_GRID] -->
     <section id="features" class="py-24 bg-white">
         <div class="max-w-6xl mx-auto px-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -140,7 +157,7 @@
         </div>
     </section>
 
-    <!-- Glass CTA Section -->
+    <!-- [UI_COMPONENT: CLOSING_CTA] -->
     <section class="py-24 relative overflow-hidden">
         <div class="absolute inset-0 bg-blue-600 transform -skew-y-3 origin-right scale-110"></div>
         <div class="max-w-4xl mx-auto px-6 relative z-10">
@@ -155,7 +172,7 @@
         </div>
     </section>
 
-    <!-- Footer -->
+    <!-- [UI_COMPONENT: SITE_FOOTER] -->
     <footer class="py-12 bg-gray-50 border-t border-gray-200">
         <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
             <div class="text-center md:text-left">
@@ -171,6 +188,7 @@
     </footer>
 
     <style>
+        /* [ANIMATION_DEFINITIONS] */
         @keyframes fade-in {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
