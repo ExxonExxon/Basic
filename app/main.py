@@ -600,5 +600,3 @@ def send_lead_notifications(tradie_phone: str, customer_phone: str, description:
             body=f"Sent! {biz_name} has received your video.")
     except Exception as e: logger.error(f"NOTIFICATION_PIPELINE_FAILURE: {e}")
 
-LINE_FAILURE: {e}")
-
