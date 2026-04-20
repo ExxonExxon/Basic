@@ -29,6 +29,9 @@ This file handles the multi-step user registration and phone verification flow f
     <title>Get Started | Tradsiee</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- [EXTERNAL_ASSETS: PHONE_INPUT] -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.10/build/css/intlTelInput.css">
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.10/build/js/intlTelInput.min.js"></script>
     <style>
         /* [UI_TOKEN_SYSTEM] Definition of the semantic color palette. */
         :root {
@@ -210,6 +213,21 @@ This file handles the multi-step user registration and phone verification flow f
             box-shadow: 0 0 0 4px rgba(255,59,48,0.1);
         }
 
+        /* [UI_COMPONENT: PASSWORD_TOGGLE] */
+        .pass-wrapper { position: relative; }
+        .toggle-password {
+            position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: var(--muted); display: flex; align-items: center;
+            transition: color 0.2s; z-index: 10;
+        }
+        .toggle-password:hover { color: var(--text); }
+        .toggle-password svg { width: 20px; height: 20px; stroke-width: 2.2; }
+
+        /* [UI_COMPONENT: INTL_TEL_OVERRIDE] */
+        .iti { width: 100%; }
+        .iti__country-list { border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 8px; }
+        .iti__country { border-radius: 8px; padding: 10px 12px; }
+
         /* [UI_COMPONENT: PASSWORD_STRENGTH_ANALYZER] */
         .strength-wrap { margin-top: 8px; display: none; }
         .strength-track { height: 3px; border-radius: 99px; background: var(--bg); overflow: hidden; }
@@ -302,18 +320,17 @@ This file handles the multi-step user registration and phone verification flow f
 
                     <div class="field">
                         <label>Phone Number</label>
-                        <div style="display:flex;gap:8px;">
-                            <select id="country-code" style="width:130px;">
-                                <option value="+61">🇦🇺 +61</option>
-                                <option value="+1">🇺🇸 +1</option>
-                            </select>
-                            <input type="tel" id="biz-phone" placeholder="400 000 000">
-                        </div>
+                        <input type="tel" id="biz-phone">
                     </div>
 
                     <div class="field">
                         <label>Password</label>
-                        <input type="password" id="biz-password" placeholder="8+ characters" oninput="checkStrength(this.value)">
+                        <div class="pass-wrapper">
+                            <input type="password" id="biz-password" placeholder="8+ characters" oninput="checkStrength(this.value)">
+                            <div class="toggle-password" onclick="togglePass('biz-password')">
+                                <svg id="eye-icon-biz-password" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c3.79 0 7.14 2.276 8.542 5.458a2.5 2.5 0 010 2.084C19.14 15.724 15.79 18 12 18c-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </div>
+                        </div>
                         <div class="strength-wrap" id="strength-wrap">
                             <div class="strength-track"><div class="strength-fill" id="strength-fill"></div></div>
                             <div class="strength-label" id="strength-label">Weak</div>
@@ -385,6 +402,29 @@ This file handles the multi-step user registration and phone verification flow f
         const API_BASE = TRADSIEE_ENV.API_BASE;
         
         let timerInterval = null;
+        let iti;
+
+        // [INIT: PHONE_INPUT]
+        window.onload = () => {
+            const input = document.querySelector("#biz-phone");
+            iti = window.intlTelInput(input, {
+                initialCountry: "au",
+                separateDialCode: true,
+                utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.0.10/build/js/utils.js",
+            });
+        };
+
+        function togglePass(id) {
+            const input = document.getElementById(id);
+            const icon = document.getElementById(`eye-icon-${id}`);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />';
+            } else {
+                input.type = 'password';
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c3.79 0 7.14 2.276 8.542 5.458a2.5 2.5 0 010 2.084C19.14 15.724 15.79 18 12 18c-4.477 0-8.268-2.943-9.542-7z"/>';
+            }
+        }
 
         /* [UTILITY: UI_NOTIFICATIONS] */
         function toast(m, type = 'error') {
@@ -457,7 +497,10 @@ This file handles the multi-step user registration and phone verification flow f
             const name = document.getElementById('biz-name').value;
             const email = document.getElementById('biz-email').value;
             const password = document.getElementById('biz-password').value;
-            const phone = document.getElementById('country-code').value + document.getElementById('biz-phone').value.trim();
+            
+            if (!iti.isValidNumber()) { toast('Please enter a valid phone number'); return; }
+            const phone = iti.getNumber(); // Gets full E.164 format automatically
+
             if (!name || !email || !password || !phone) { toast('All fields required'); return; }
 
             const btn = document.getElementById('reg-btn');

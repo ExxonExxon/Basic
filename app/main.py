@@ -87,13 +87,37 @@ cloudinary.config(
 )
 
 # [TRANSIENT_MEMORY_STATE]
-# Volatile storage for data that does not require long-term persistence or is in a 'waiting' state.
-# pending_registrations: Stores temporary user profile data during the MFA verification window.
-# verification_codes: Maps phone numbers to active 6-digit OTP codes.
-# WIDGET_TEMPLATE_CACHE: Pre-processed HTML for the embedded widget.
-# HTML_PAGES_CACHE: Pre-processed and minified strings for application pages.
-pending_registrations: Dict[str, Any] = {}
+# We've moved registrations to the DB, but we keep verification_codes in memory 
+# for speed. Since we have Identity Reclamation, a lost code on restart just 
+# requires the user to click "Resend."
 verification_codes: Dict[str, str] = {}
+
+# [SECURITY_ORCHESTRATION: RATE_LIMITING]
+# Tracks IP-based activity to prevent Twilio credit exhaustion and brute-force attacks.
+# sms_last_sent: Maps IP to timestamp of last SMS dispatch.
+# registration_attempts: Maps IP to count of signups in the current window.
+sms_last_sent: Dict[str, datetime] = {}
+registration_attempts: Dict[str, List[datetime]] = {}
+
+def is_rate_limited(ip: str, limit_type: str = "sms") -> bool:
+    now = datetime.now()
+    if limit_type == "sms":
+        last_sent = sms_last_sent.get(ip)
+        if last_sent and (now - last_sent).total_seconds() < 60:
+            return True
+        sms_last_sent[ip] = now
+    
+    elif limit_type == "register":
+        attempts = registration_attempts.get(ip, [])
+        # Filter for attempts in the last hour
+        valid_attempts = [t for t in attempts if (now - t).total_seconds() < 3600]
+        if len(valid_attempts) >= 5: # Max 5 signups per hour per IP
+            return True
+        valid_attempts.append(now)
+        registration_attempts[ip] = valid_attempts
+        
+    return False
+
 WIDGET_TEMPLATE_CACHE: Optional[str] = None
 HTML_PAGES_CACHE: Dict[str, str] = {}
 
@@ -291,10 +315,14 @@ async def resend_confirmation(data: dict):
         raise HTTPException(status_code=400, detail="Failed to resend email.")
 
 @app.post("/register")
-async def register_tradie(data: dict):
+async def register_tradie(data: dict, request: Request):
     # [REGISTRATION_PIPELINE: STEP 1]
-    # Initializes the user account in Supabase Auth and generates the unique business profile.
-    # Holds data in volatile memory (pending_registrations) until phone verification is complete.
+    # Collects profile data and validates identity uniqueness.
+    client_ip = request.client.host
+    if is_rate_limited(client_ip, "register"):
+        logger.warning(f"RATE_LIMIT_EXCEEDED: register from ip={client_ip}")
+        raise HTTPException(status_code=429, detail="Too many registration attempts. Please try again in an hour.")
+
     name, email, password, phone = data.get("business_name"), data.get("email"), data.get("password"), data.get("phone_number")
     if not all([name, email, password, phone]):
         raise HTTPException(status_code=400, detail="Missing data.")
@@ -325,13 +353,15 @@ async def register_tradie(data: dict):
             logger.info(f"IDENTITY_RECLAMATION_START: Phone {formatted_phone} is claiming from unverified email.")
 
         # [STAGING]
+        # We persist the signup data to Supabase so it survives server reloads.
         new_slug = await generate_unique_slug(name)
-        profile_data = {
+        staged_data = {
             "business_name": name, "email": email, "password": password,
-            "phone_number": formatted_phone, "slug": new_slug, "credits": 10, "is_verified": False
+            "phone_number": formatted_phone, "slug": new_slug, "credits": 10
         }
 
-        pending_registrations[formatted_phone] = profile_data
+        # Upsert into staged table (wipes any old attempt for this phone)
+        await run_sync(supabase_admin.table("staged_registrations").upsert(staged_data, on_conflict="phone_number").execute)
         return {"status": "success", "slug": new_slug}
     except HTTPException as he:
         raise he
@@ -369,8 +399,13 @@ async def login(data: dict):
         raise HTTPException(status_code=401, detail="Invalid credentials.")
 
 @app.post("/send-verification")
-async def send_verification(data: dict):
+async def send_verification(data: dict, request: Request):
     # [MFA_CHALLENGE_DISPATCH]
+    client_ip = request.client.host
+    if is_rate_limited(client_ip, "sms"):
+        logger.warning(f"RATE_LIMIT_EXCEEDED: sms from ip={client_ip}")
+        raise HTTPException(status_code=429, detail="Please wait 60 seconds before requesting another code.")
+
     phone = data.get("phone")
     if not phone: raise HTTPException(status_code=400, detail="Phone required.")
     
@@ -393,8 +428,19 @@ async def send_verification(data: dict):
             raise HTTPException(status_code=500, detail="SMS failed.")
     return {"status": "success"}
 
+def get_base_url(request: Request) -> str:
+    # [ENVIRONMENT_SENSITIVE_RESOLUTION]
+    # Dynamically detects the base URL (localhost vs production) based on the request origin.
+    # This ensures email redirects (Supabase) always point back to the correct environment.
+    origin = request.headers.get("origin")
+    host = request.headers.get("host", "")
+    
+    if (origin and "localhost" in origin) or "localhost" in host or "127.0.0.1" in host:
+        return "http://localhost:8000"
+    return FRONTEND_URL # Defaults to https://tradsiee.com from .env
+
 @app.post("/verify-code")
-async def verify_code(data: dict):
+async def verify_code(data: dict, request: Request):
     # [REGISTRATION_PIPELINE: STEP 2]
     # Confirms the MFA code. On success, the Supabase Auth record is created 
     # (triggering the confirmation email) and the profile is persisted.
@@ -402,43 +448,49 @@ async def verify_code(data: dict):
     formatted_phone = format_phone(phone)
     
     stored_code = verification_codes.get(formatted_phone)
-    logger.info(f"VERIFICATION_ATTEMPT: phone={formatted_phone} | provided={code} | expected={stored_code}")
-
     if not stored_code or stored_code != code:
         raise HTTPException(status_code=400, detail="Invalid or expired verification code.")
     
     del verification_codes[formatted_phone]
-    if formatted_phone in pending_registrations:
-        profile_data = pending_registrations.pop(formatted_phone)
-        password = profile_data.pop("password")
-        
-        try:
-            # [RECLAMATION_LOGIC]
-            # If this phone number is tied to an unverified stale account, wipe it now 
-            # because the user has just proven they own the phone via SMS.
-            existing = await run_sync(supabase_admin.table("tradies").select("id").eq("phone_number", formatted_phone).execute)
-            if existing.data:
-                old_id = existing.data[0]["id"]
-                logger.warning(f"IDENTITY_RECLAMATION_EXECUTING: Wiping stale account {old_id} for phone {formatted_phone}")
-                # 1. Delete from Tradies (leads will cascade if you set up FK correctly, or just delete tradie)
-                await run_sync(supabase_admin.table("tradies").delete().eq("id", old_id).execute)
-                # 2. Delete from Supabase Auth
-                try: await run_sync(supabase_admin.auth.admin.delete_user, old_id)
-                except: pass # User might already be gone
+    
+    # [PERSISTENT_RECOVERY]
+    staged_res = await run_sync(supabase_admin.table("staged_registrations").select("*").eq("phone_number", formatted_phone).single().execute)
+    if not staged_res.data:
+        raise HTTPException(status_code=400, detail="Signup session expired.")
+    
+    profile_data = staged_res.data
+    password = profile_data.pop("password")
+    
+    base_url = get_base_url(request)
+    
+    try:
+        # [RECLAMATION_LOGIC]
+        existing = await run_sync(supabase_admin.table("tradies").select("id").eq("phone_number", formatted_phone).execute)
+        if existing.data:
+            old_id = existing.data[0]["id"]
+            logger.warning(f"IDENTITY_RECLAMATION_EXECUTING: Wiping stale account {old_id}")
+            await run_sync(supabase_admin.table("tradies").delete().eq("id", old_id).execute)
+            try: await run_sync(supabase_admin.auth.admin.delete_user, old_id)
+            except: pass
 
-            # [PROVISIONING]
-            # 1. Create Supabase Auth User (Triggers Confirmation Email)
-            auth_res = await run_sync(supabase.auth.sign_up, {"email": profile_data["email"], "password": password})
-            if not auth_res.user:
-                raise HTTPException(status_code=400, detail="Auth creation failed.")
-            
-            # 2. Persist Profile
-            profile_data["id"] = auth_res.user.id
-            await run_sync(supabase_admin.table("tradies").insert(profile_data).execute)
-            return {"status": "success"}
-        except Exception as e:
-            logger.error(f"AUTH_PROVISIONING_FAILURE: {e}")
-            raise HTTPException(status_code=500, detail="Failed to finalize account.")
+        # [PROVISIONING]
+        # Use dynamic base_url to ensure redirects work in both local and prod
+        auth_res = await run_sync(supabase.auth.sign_up, {
+            "email": profile_data["email"], 
+            "password": password,
+            "options": { "redirect_to": f"{base_url}/verified" }
+        })
+        if not auth_res.user:
+            raise HTTPException(status_code=400, detail="Auth creation failed.")
+        
+        profile_data["id"] = auth_res.user.id
+        await run_sync(supabase_admin.table("tradies").insert(profile_data).execute)
+        await run_sync(supabase_admin.table("staged_registrations").delete().eq("phone_number", formatted_phone).execute)
+        
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"AUTH_PROVISIONING_FAILURE: {e}")
+        raise HTTPException(status_code=500, detail="Failed to finalize account.")
             
     return {"status": "success"}
 
@@ -609,13 +661,14 @@ async def update_lead_status(lead_id: str, data: dict, user=Depends(get_current_
     return {"status": "success"}
 
 @app.post("/forgot-password")
-async def forgot_password(data: ForgotPasswordSchema):
+async def forgot_password(data: ForgotPasswordSchema, request: Request):
     # [PASSWORD_RECOVERY_GATEWAY]
-    # Initiates a password reset via Supabase Auth, sending a secure recovery email 
-    # that redirects to the portal's update-password route.
+    # Initiates a password reset via Supabase Auth.
+    # Uses dynamic base_url to ensure the reset link works in the current environment.
     try:
+        base_url = get_base_url(request)
         path_update = os.getenv("PATH_UPDATE_PWD", "/update-password")
-        await run_sync(supabase.auth.reset_password_for_email, data.email, {"redirect_to": f"{FRONTEND_URL}{path_update}"})
+        await run_sync(supabase.auth.reset_password_for_email, data.email, {"redirect_to": f"{base_url}{path_update}"})
         return {"status": "success"}
     except Exception as e:
         logger.error(f"PASSWORD_RESET_FAILURE: {e}")
@@ -651,12 +704,27 @@ async def serve_preview():
 async def serve_verified():
     return HTML_PAGES_CACHE.get("verified", "Page missing.")
 
-@app.post("/update-password")
-async def update_password(data: ResetPasswordSchema, user=Depends(get_current_user)):
-    # [ACCOUNT_STATE_MUTATION]
-    # Directly updates the user's password in the Supabase Auth database.
+async def get_any_user(auth: HTTPAuthorizationCredentials = Depends(security)):
+    # [AUTHENTICATION_GUARD: LIGHT]
+    # Similar to get_current_user but does NOT enforce email verification.
+    if not auth or not auth.credentials or auth.credentials == "null":
+        raise HTTPException(status_code=401, detail="Session required.")
     try:
-        await run_sync(supabase.auth.update_user, {"password": data.new_password})
+        res = await run_sync(supabase.auth.get_user, auth.credentials)
+        user = getattr(res, 'user', None) or (res.get('user') if isinstance(res, dict) else None)
+        if not user: raise HTTPException(status_code=401, detail="Invalid session.")
+        return user
+    except Exception as e:
+        logger.error(f"AUTH_VERIFICATION_FAILURE: {e}")
+        raise HTTPException(status_code=401, detail="Authentication failed.")
+
+@app.post("/update-password")
+async def update_password(data: ResetPasswordSchema, user=Depends(get_any_user)):
+    # [ACCOUNT_STATE_MUTATION]
+    # Updates password. Uses supabase_admin.auth.admin to ensure the update 
+    # succeeds regardless of the user's current session state.
+    try:
+        await run_sync(supabase_admin.auth.admin.update_user_by_id, user.id, {"password": data.new_password})
         return {"status": "success"}
     except Exception as e:
         logger.error(f"PASSWORD_ROTATION_FAILURE: {e}")
