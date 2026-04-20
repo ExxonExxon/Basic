@@ -166,15 +166,14 @@ through video-based problem descriptions.
     <div style="text-align:center;margin-top:14px;font-size:10px;font-weight:700;text-transform:uppercase;color:#C7C7CC;">Powered by Tradsiee</div>
 </div>
 
+    <script src="/config.js"></script>
 <script>
     /* [SCRIPT_SPECIFICATION]
        Handles the stateful orchestration of the lead-capture widget.
        Manages local wizard navigation, Cloudinary media transmission, and backend persistence.
     */
 
-    const TS_API = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
-        ? "http://127.0.0.1:8000"
-        : window.location.origin;
+    const TS_API = TRADSIEE_ENV.API_BASE;
 
     // Configuration resolution from environment injection.
     const TS_SLUG          = (new URLSearchParams(window.location.search)).get('slug') || window.TRADSIEE_SLUG || "[[SLUG_PLACEHOLDER]]";

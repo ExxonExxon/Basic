@@ -68,15 +68,14 @@ It allows tradies to experience the customer journey directly from their portal.
     <!-- [INJECTION_TARGET] The Tradsiee Widget Loader will append the iframe here. -->
     <div id="tradsiee-widget" style="margin-top: 50px;"></div>
 
+    <script src="/config.js"></script>
     <script>
         /* [BOOTSTRAP_ORCHESTRATION] 
            Resolves the tenant context and dynamically loads the widget logic.
         */
         const params = new URLSearchParams(window.location.search);
         const slug = params.get('slug');
-        const API_BASE = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
-            ? "http://127.0.0.1:8000"
-            : window.location.origin;
+        const API_BASE = TRADSIEE_ENV.API_BASE;
 
         if (slug) {
             // [WIDGET_INJECTION] Dynamically load the loader script with the tenant slug.

@@ -57,8 +57,10 @@ logger = logging.getLogger("tradsiee-engine")
 # [ENVIRONMENT_VARS_RESOLUTION]
 # API_BASE_URL: The external-facing endpoint of this backend (used for loader scripts).
 # FRONTEND_URL: The root URL of the dashboard/portal (used for password reset redirection).
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
+# LEAD_LIMITS_ENABLED: Master toggle for enforcing the credit system.
+API_BASE_URL = os.getenv("API_BASE_URL", "https://tradsiee.com")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://tradsiee.com")
+LEAD_LIMITS_ENABLED = os.getenv("LEAD_LIMITS_ENABLED", "false").lower() == "true"
 
 # [CLIENT_INITIALIZATION: TWILIO]
 # Establishes the connection to the Twilio REST API for SMS orchestration.
@@ -158,7 +160,8 @@ async def lifespan(app: FastAPI):
             "signup": "signup.html",
             "portal": "portal.html",
             "update-password": "update-password.html",
-            "preview": "widget-preview.html"
+            "preview": "widget-preview.html",
+            "admin": "admin.html"
         }
         for key, filename in pages.items():
             HTML_PAGES_CACHE[key] = process_html(filename)
@@ -381,26 +384,62 @@ async def submit_lead_data(slug: str, data: LeadData, background_tasks: Backgrou
     Ingests new lead data from the client-side widget.
     
     1. Resolves the target business identity.
-    2. Normalizes and persists the lead metadata in the database.
-    3. Offloads SMS notifications (Tradie alert & Customer confirmation) to background tasks.
+    2. Checks/Enforces lead limits if the master toggle is ENABLED.
+    3. Normalizes and persists the lead metadata.
+    4. Offloads SMS notifications to background tasks.
     """
-    tradie_res = await run_sync(supabase_admin.table("tradies").select("id, phone_number, business_name").eq("slug", slug).single().execute)
+    tradie_res = await run_sync(supabase_admin.table("tradies").select("id, phone_number, business_name, credits").eq("slug", slug).single().execute)
     if not tradie_res.data: raise HTTPException(status_code=404, detail="Not found.")
 
     tradie = tradie_res.data
+    
+    # [CREDIT_VALIDATION]
+    # Only enforce limits if the Global Master Toggle is turned ON.
+    if LEAD_LIMITS_ENABLED:
+        if (tradie.get("credits") or 0) <= 0:
+            raise HTTPException(status_code=402, detail="Lead limit reached. Please contact support.")
+
     lead_data = {
         "tradie_id": tradie["id"], "video_url": data.video_url, "customer_phone": format_phone(data.customer_phone),
         "customer_description": data.customer_description, "first_name": data.first_name, "last_name": data.last_name, "status": "pending"
     }
     
+    # 1. Store lead
     await run_sync(supabase_admin.table("leads").insert(lead_data).execute)
     
-    # Asynchronous Notification: Notifies both parties without blocking the widget's UI response.
+    # 2. Decrement credit ONLY if limits are enabled
+    if LEAD_LIMITS_ENABLED:
+        await run_sync(supabase_admin.table("tradies").update({"credits": tradie["credits"] - 1}).eq("id", tradie["id"]).execute)
+    
+    # Asynchronous Notification
     background_tasks.add_task(
         send_lead_notifications, 
         tradie["phone_number"], data.customer_phone, data.customer_description, tradie["business_name"]
     )
     return {"status": "success"}
+
+@app.get("/config.js")
+async def get_config_js():
+    # [DYNAMIC_CONFIG_GENERATION]
+    # Injects server-side environment flags into the client-side configuration.
+    
+    js_content = f"""
+/**
+ * Tradsiee Global Configuration (Dynamically Generated)
+ */
+const TRADSIEE_ENV = {{
+    isLocal: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1',
+    leadLimitsEnabled: {str(LEAD_LIMITS_ENABLED).lower()},
+    get API_BASE() {{
+        return this.isLocal ? "http://localhost:8000" : "https://tradsiee.com";
+    }}
+}};
+"""
+    return Response(
+        content=js_content, 
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 @app.get("/widget-bundle.js")
 async def get_widget_bundle():
@@ -578,6 +617,43 @@ async def delete_account(slug: str, code: str, user=Depends(get_current_user)):
     except Exception as e:
         logger.error(f"DELETION_FAILURE: {e}")
         raise HTTPException(status_code=500, detail="Deletion failed.")
+
+@app.get("/ops-tomas-99", response_class=HTMLResponse)
+async def admin_page():
+    # [SECRET_OPS_PORTAL]
+    # Secret route for system management.
+    return HTML_PAGES_CACHE.get("admin", "Page missing.")
+
+@app.get("/admin-data")
+async def get_admin_data(user=Depends(get_current_user)):
+    # [PRIVACY_AWARE_ADMIN_FETCH]
+    if user.email != "tomas.gorjux@gmail.com":
+        raise HTTPException(status_code=403, detail="Admin access denied.")
+    
+    # We explicitly EXCLUDE private data like phone_numbers or specific lead details.
+    # We only fetch what is needed for credit management and account identification.
+    tradies_res = await run_sync(
+        supabase_admin.table("tradies")
+        .select("id, business_name, email, slug, credits, created_at")
+        .order("created_at", desc=True)
+        .execute
+    )
+    return {"tradies": tradies_res.data}
+
+@app.post("/admin/update-credits")
+async def update_credits(data: dict, user=Depends(get_current_user)):
+    # [ADMIN_ACTION: CREDIT_MODIFICATION]
+    if user.email != "tomas.gorjux@gmail.com":
+        raise HTTPException(status_code=403, detail="Admin access denied.")
+    
+    tradie_id = data.get("tradie_id")
+    new_credits = data.get("credits")
+    
+    if tradie_id is None or new_credits is None:
+        raise HTTPException(status_code=400, detail="Missing data.")
+    
+    await run_sync(supabase_admin.table("tradies").update({"credits": new_credits}).eq("id", tradie_id).execute)
+    return {"status": "success"}
 
 @app.get("/health")
 def health(): 

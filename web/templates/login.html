@@ -242,13 +242,12 @@ orchestrating login, password recovery, and session establishment.
         <p style="text-align:center;margin-top:28px;font-size:13px;color:var(--muted);">New to Tradsiee? <a href="[[PATH_SIGNUP]]" style="color:var(--blue);font-weight:700;text-decoration:none;">Create an account</a></p>
     </div>
 
+    <script src="/config.js"></script>
     <script>
         /* [SCRIPT_SPECIFICATION]
            Manages logical view transitions and backend API orchestration for the authentication suite.
         */
-        const API_BASE = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
-            ? "http://127.0.0.1:8000"
-            : window.location.origin;
+        const API_BASE = TRADSIEE_ENV.API_BASE;
 
         function toast(m, type = 'error') {
             const el = document.createElement('div');
@@ -312,6 +311,10 @@ orchestrating login, password recovery, and session establishment.
                 else toast('Could not send reset link');
             } catch { toast('Connection error'); }
             btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
         }
     </script>
 </body>

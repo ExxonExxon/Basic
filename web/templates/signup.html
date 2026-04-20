@@ -368,13 +368,12 @@ This file handles the multi-step user registration and phone verification flow f
         <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--muted);">Already have an account? <a href="[[PATH_LOGIN]]" style="color:var(--blue);font-weight:700;">Sign in</a></p>
     </div>
 
+    <script src="/config.js"></script>
     <script>
         /* [SCRIPT_OVERVIEW]
            Manages the stateful registration flow and background API orchestration.
         */
-        const API_BASE = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
-            ? "http://127.0.0.1:8000"
-            : window.location.origin;
+        const API_BASE = TRADSIEE_ENV.API_BASE;
         
         let timerInterval = null;
 
@@ -507,6 +506,10 @@ This file handles the multi-step user registration and phone verification flow f
                 } else { toast('Invalid code'); }
             } catch { toast('Error'); }
             btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
         }
     </script>
 </body>

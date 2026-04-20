@@ -66,15 +66,14 @@ embedding behavior and data capture pipeline.
     <!-- [INJECTION_TARGET] The root element where the loader.js will append the widget iframe. -->
     <div id="tradsiee-widget" style="margin-top: 50px;"></div>
 
+    <script src="/config.js"></script>
     <script>
         /* [BOOTSTRAP_LOGIC] 
            Resolves the active business slug and initializes the dynamic injection script.
         */
         const params = new URLSearchParams(window.location.search);
         const slug = params.get('slug');
-        const API_BASE = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
-            ? "http://127.0.0.1:8000"
-            : window.location.origin;
+        const API_BASE = TRADSIEE_ENV.API_BASE;
 
         if (slug) {
             // [DYNAMIC_INJECTION] Orchestrates the load of the production-ready loader script.

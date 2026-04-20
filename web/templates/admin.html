@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradsiee | System Ops</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F2F2F7;
+            --card: #FFFFFF;
+            --text: #1C1C1E;
+            --blue: #007AFF;
+            --border: rgba(0,0,0,0.07);
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 40px 20px; }
+        .admin-card { background: var(--card); border-radius: 24px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #8E8E93; }
+        td { padding: 16px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        input[type="number"] { width: 70px; padding: 6px; border-radius: 10px; border: 1.5px solid var(--border); text-align: center; font-weight: 700; }
+        .btn-save { background: var(--blue); color: white; padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 800; transition: transform 0.1s; }
+        .btn-save:active { transform: scale(0.95); }
+        .status-badge { padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; background: #E5E5EA; color: #8E8E93; }
+    </style>
+</head>
+<body>
+    <div class="max-w-5xl mx-auto">
+        <div id="auth-wall" style="display:none;" class="text-center py-20">
+            <h1 class="text-2xl font-black mb-4">System Ops Login</h1>
+            <p class="text-gray-500 mb-8">Unauthorized access is monitored.</p>
+            <button onclick="window.location.href='/login'" class="bg-black text-white px-8 py-3 rounded-2xl font-bold">Sign In as Admin</button>
+        </div>
+
+        <div id="main-content">
+            <header class="flex justify-between items-center mb-10">
+                <div>
+                    <h1 class="text-4xl font-black tracking-tight">System Operations</h1>
+                    <div class="flex items-center gap-2 mt-2">
+                        <p class="text-gray-400 font-medium">Privacy-Mode: Business Metadata</p>
+                        <span id="global-limit-status" class="status-badge"></span>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="window.location.href='/portal'" class="text-gray-400 font-bold text-sm">Portal</button>
+                    <button onclick="logout()" class="text-red-500 font-bold text-sm">Logout</button>
+                </div>
+            </header>
+
+            <div class="admin-card">
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Business</th>
+                                <th>Identity</th>
+                                <th>Created</th>
+                                <th class="text-center">Leads Left</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tradie-list">
+                            <tr><td colspan="5" class="text-center py-10 text-gray-400">Loading system data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <p class="text-center mt-8 text-xs text-gray-400 font-medium uppercase tracking-widest">Tradsiee Engine v1.2 &bull; Restricted Access</p>
+        </div>
+    </div>
+
+    <script src="/config.js"></script>
+    <script>
+        const API = TRADSIEE_ENV.API_BASE;
+        const token = localStorage.getItem('tradsiee_token');
+
+        if (!token) {
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('auth-wall').style.display = 'block';
+        }
+
+        async function loadData() {
+            // Update Global Status Badge
+            const statusBadge = document.getElementById('global-limit-status');
+            const limitsEnabled = TRADSIEE_ENV.leadLimitsEnabled;
+            statusBadge.innerText = limitsEnabled ? "Limits: Active" : "Limits: Disabled";
+            statusBadge.style.background = limitsEnabled ? "#FF9500" : "#E5E5EA";
+            statusBadge.style.color = limitsEnabled ? "white" : "#8E8E93";
+
+            try {
+                const res = await fetch(`${API}/admin-data`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.status === 401 || res.status === 403) {
+                    document.getElementById('main-content').style.display = 'none';
+                    document.getElementById('auth-wall').style.display = 'block';
+                    return;
+                }
+
+                const data = await res.json();
+                const list = document.getElementById('tradie-list');
+                list.innerHTML = '';
+
+                data.tradies.forEach(t => {
+                    const date = new Date(t.created_at).toLocaleDateString('en-AU', { day:'2-digit', month:'short' });
+                    const tr = document.createElement('tr');
+                    
+                    const creditInput = limitsEnabled 
+                        ? `<input type="number" id="credits-${t.id}" value="${t.credits || 0}">`
+                        : `<span class="text-gray-400 font-bold">∞</span>`;
+                    
+                    const actionBtn = limitsEnabled
+                        ? `<button class="btn-save" onclick="updateCredits('${t.id}')">Update</button>`
+                        : `<span class="text-xs text-gray-300">N/A</span>`;
+
+                    tr.innerHTML = `
+                        <td>
+                            <div class="font-bold text-base">${t.business_name}</div>
+                            <div class="text-xs text-gray-400">slug: ${t.slug}</div>
+                        </td>
+                        <td>
+                            <div class="font-medium">${t.email}</div>
+                        </td>
+                        <td>
+                            <span class="status-badge">${date}</span>
+                        </td>
+                        <td class="text-center">
+                            ${creditInput}
+                        </td>
+                        <td class="text-right">
+                            ${actionBtn}
+                        </td>
+                    `;
+                    list.appendChild(tr);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function updateCredits(id) {
+            const val = document.getElementById(`credits-${id}`).value;
+            const btn = event.target;
+            btn.innerText = '...';
+            try {
+                const res = await fetch(`${API}/admin/update-credits`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tradie_id: id, credits: parseInt(val) })
+                });
+                if (res.ok) {
+                    btn.innerText = 'Saved';
+                    btn.style.background = '#34C759';
+                    setTimeout(() => {
+                        btn.innerText = 'Update';
+                        btn.style.background = '#007AFF';
+                    }, 1000);
+                }
+            } catch (e) {
+                alert("Update failed.");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('tradsiee_token');
+            localStorage.removeItem('tradsiee_slug');
+            window.location.href = '/login';
+        }
+
+        if (token) loadData();
+    </script>
+</body>
+</html>
