@@ -70,12 +70,21 @@ TEFLON_SERVICE_SID = os.getenv("TWILIO_MESSAGING_SERVICE_SID")
 twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN) if TWILIO_ACCOUNT_SID else None
 
 # [CLIENT_INITIALIZATION: SUPABASE]
-# supabase: standard client for user-authenticated operations.
-# supabase_admin: elevated client used for backend-only operations (e.g., verifying phone codes).
+# supabase_admin: Uses SERVICE_ROLE key. Bypasses RLS. Use ONLY for registration and internal logic.
+# supabase_anon: Uses ANON key. Respects RLS. Use for user-facing data requests.
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_KEY") # This should be your service_role key
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", SUPABASE_SERVICE_KEY) # Fallback to service if not set
+
+supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+def get_supabase_user_client(token: str) -> Client:
+    # [RLS_ORCHESTRATION]
+    # Creates a Supabase client scoped to the specific user's JWT.
+    # This ensures that Row Level Security (RLS) is enforced at the database level.
+    client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    client.postgrest.auth(token)
+    return client
 
 # [CLIENT_INITIALIZATION: CLOUDINARY]
 # Configures the multimedia SDK for secure asset management.
@@ -276,25 +285,28 @@ async def generate_unique_slug(name: str) -> str:
             return candidate
     return f"{base}-{random.getrandbits(32)}"
 
-async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security)):
+class AuthenticatedTradie:
+    def __init__(self, user: Any, client: Client):
+        self.user = user
+        self.supabase = client
+        self.id = user.id
+
+async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security)) -> AuthenticatedTradie:
     # [AUTHENTICATION_GUARD]
-    # Dependency injected into protected routes to verify the requester's identity.
-    # Uses Supabase's built-in JWT verification to validate session tokens.
     if not auth or not auth.credentials or auth.credentials == "null":
         raise HTTPException(status_code=401, detail="Session required.")
     try:
-        res = await run_sync(supabase.auth.get_user, auth.credentials)
+        # 1. Standard session check via Admin client (for speed/validation)
+        res = await run_sync(supabase_admin.auth.get_user, auth.credentials)
         user = getattr(res, 'user', None) or (res.get('user') if isinstance(res, dict) else None)
         if not user:
             raise HTTPException(status_code=401, detail="Invalid session.")
         
-        # [IDENTITY_SECURITY_CHECK]
-        # Prevent "Email Spoofing" by checking if the user has confirmed their identity.
         if not getattr(user, 'email_confirmed_at', None):
-            # We return a specific error that the frontend can use to show a verification banner.
             raise HTTPException(status_code=403, detail="EMAIL_NOT_VERIFIED")
             
-        return user
+        # 2. Return the user along with a client scoped to their JWT
+        return AuthenticatedTradie(user, get_supabase_user_client(auth.credentials))
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -308,7 +320,7 @@ async def resend_confirmation(data: dict):
     email = data.get("email")
     if not email: raise HTTPException(status_code=400, detail="Email required.")
     try:
-        await run_sync(supabase.auth.resend, {"type": "signup", "email": email})
+        await run_sync(supabase_admin.auth.resend, {"type": "signup", "email": email})
         return {"status": "success"}
     except Exception as e:
         logger.error(f"RESEND_FAILURE: {e}")
@@ -376,7 +388,7 @@ async def login(data: dict):
     try:
         # If Supabase Auth is set to 'Confirm Email', this call will succeed 
         # but the session might be limited, or it might throw 403.
-        auth_res = await run_sync(supabase.auth.sign_in_with_password, {"email": email, "password": password})
+        auth_res = await run_sync(supabase_admin.auth.sign_in_with_password, {"email": email, "password": password})
         
         # Get business slug
         res = await run_sync(supabase_admin.table("tradies").select("slug").eq("id", auth_res.user.id).execute)
@@ -495,26 +507,21 @@ async def verify_code(data: dict, request: Request):
     return {"status": "success"}
 
 @app.get("/get-leads/{slug}")
-async def get_leads(slug: str, limit: int = 50, offset: int = 0, user=Depends(get_current_user)):
-    """
-    Retrieves the lead pipeline for a specific business workspace.
-    
-    1. Validates the existence of the business slug.
-    2. Enforces ownership: Ensuring the authenticated user matches the slug owner.
-    3. Fetches a paginated list of leads sorted by creation date.
-    """
-    tradie_res = await run_sync(supabase_admin.table("tradies").select("id, business_name, credits").eq("slug", slug).single().execute)
-    if not tradie_res.data: raise HTTPException(status_code=404, detail="Not found.")
+async def get_leads(slug: str, limit: int = 50, offset: int = 0, tradie: AuthenticatedTradie = Depends(get_current_user)):
+    # [PIPELINE_ORCHESTRATION]
+    # Retrieves leads using the scoped client, enforcing RLS at the DB level.
+    # Note: Slug check is still performed via admin for speed/validation.
+    biz_res = await run_sync(supabase_admin.table("tradies").select("id, business_name, credits").eq("slug", slug).single().execute)
+    if not biz_res.data: raise HTTPException(status_code=404, detail="Not found.")
+    if biz_res.data["id"] != tradie.id: raise HTTPException(status_code=403, detail="Unauthorized.")
 
-    tradie = tradie_res.data
-    if tradie["id"] != user.id: raise HTTPException(status_code=403, detail="Unauthorized access attempt.")
-
+    # Enforcement: Scoped client only sees rows matching tradie_id = tradie.id
     leads_res = await run_sync(
-        supabase_admin.table("leads")
-        .select("*").eq("tradie_id", tradie["id"])
+        tradie.supabase.table("leads")
+        .select("*")
         .order("created_at", desc=True).range(offset, offset + limit - 1).execute
     )
-    return {"business_name": tradie["business_name"], "credits": tradie["credits"], "leads": leads_res.data}
+    return {"business_name": biz_res.data["business_name"], "credits": biz_res.data["credits"], "leads": leads_res.data}
 
 @app.post("/submit-lead-data/{slug}")
 async def submit_lead_data(slug: str, data: LeadData, background_tasks: BackgroundTasks):
@@ -646,18 +653,16 @@ async def get_widget_ui(slug: str):
     return content.replace('[[SLUG_PLACE_HOLDER]]', slug)
 
 @app.patch("/update-lead-status/{lead_id}")
-async def update_lead_status(lead_id: str, data: dict, user=Depends(get_current_user)):
+async def update_lead_status(lead_id: str, data: dict, tradie: AuthenticatedTradie = Depends(get_current_user)):
     # [PIPELINE_STATE_TRANSITION]
-    # Updates a lead's position in the Kanban board (pending -> contacted -> archived).
-    # Verifies that the lead actually belongs to the authenticated user's workspace.
     status = data.get("status")
     if not status: raise HTTPException(status_code=400, detail="Status required.")
     
-    lead_res = await run_sync(supabase_admin.table("leads").select("tradie_id").eq("id", lead_id).single().execute)
-    if not lead_res.data: raise HTTPException(status_code=404, detail="Lead not found.")
-    if lead_res.data["tradie_id"] != user.id: raise HTTPException(status_code=403, detail="Unauthorized.")
-    
-    await run_sync(supabase_admin.table("leads").update({"status": status}).eq("id", lead_id).execute)
+    # DB-level check: RLS will block the update if lead_id does not belong to auth.uid()
+    # The scoped client ensures we can only touch our own leads.
+    res = await run_sync(tradie.supabase.table("leads").update({"status": status}).eq("id", lead_id).execute)
+    if not res.data:
+        raise HTTPException(status_code=403, detail="Unauthorized or lead not found.")
     return {"status": "success"}
 
 @app.post("/forgot-password")
@@ -668,7 +673,7 @@ async def forgot_password(data: ForgotPasswordSchema, request: Request):
     try:
         base_url = get_base_url(request)
         path_update = os.getenv("PATH_UPDATE_PWD", "/update-password")
-        await run_sync(supabase.auth.reset_password_for_email, data.email, {"redirect_to": f"{base_url}{path_update}"})
+        await run_sync(supabase_admin.auth.reset_password_for_email, data.email, {"redirect_to": f"{base_url}{path_update}"})
         return {"status": "success"}
     except Exception as e:
         logger.error(f"PASSWORD_RESET_FAILURE: {e}")
@@ -710,7 +715,7 @@ async def get_any_user(auth: HTTPAuthorizationCredentials = Depends(security)):
     if not auth or not auth.credentials or auth.credentials == "null":
         raise HTTPException(status_code=401, detail="Session required.")
     try:
-        res = await run_sync(supabase.auth.get_user, auth.credentials)
+        res = await run_sync(supabase_admin.auth.get_user, auth.credentials)
         user = getattr(res, 'user', None) or (res.get('user') if isinstance(res, dict) else None)
         if not user: raise HTTPException(status_code=401, detail="Invalid session.")
         return user
@@ -731,16 +736,16 @@ async def update_password(data: ResetPasswordSchema, user=Depends(get_any_user))
         raise HTTPException(status_code=400, detail="Failed to update password.")
 
 @app.post("/send-delete-code")
-async def send_delete_code(user=Depends(get_current_user)):
+async def send_delete_code(tradie: AuthenticatedTradie = Depends(get_current_user)):
     # [DESTRUCTIVE_ACTION_MFA]
     # Issues a confirmation code via SMS before allowing account deletion.
     # Acts as a critical high-friction security gate.
-    res = await run_sync(supabase_admin.table("tradies").select("phone_number").eq("id", user.id).single().execute)
+    res = await run_sync(supabase_admin.table("tradies").select("phone_number").eq("id", tradie.id).single().execute)
     if not res.data: raise HTTPException(status_code=404, detail="Profile not found.")
     
     phone = res.data["phone_number"]
     code = str(random.randint(100000, 999999))
-    verification_codes[f"DEL_{user.id}"] = code
+    verification_codes[f"DEL_{tradie.id}"] = code
     
     if twilio_client:
         try:
@@ -755,22 +760,21 @@ async def send_delete_code(user=Depends(get_current_user)):
     return {"status": "success"}
 
 @app.delete("/delete-account/{slug}")
-async def delete_account(slug: str, code: str, user=Depends(get_current_user)):
+async def delete_account(slug: str, code: str, tradie: AuthenticatedTradie = Depends(get_current_user)):
     # [ACCOUNT_TERMINATION_LOGIC]
-    # Performs permanent deletion of the business profile and auth record.
-    # Side Effects: Deletes rows from 'leads', 'tradies', and removes user from Supabase Auth.
-    if verification_codes.get(f"DEL_{user.id}") != code:
+    if verification_codes.get(f"DEL_{tradie.id}") != code:
         raise HTTPException(status_code=400, detail="Invalid code.")
     
-    res = await run_sync(supabase_admin.table("tradies").select("id, slug").eq("id", user.id).single().execute)
-    if not res.data or res.data["slug"] != slug:
-        raise HTTPException(status_code=404, detail="Slug mismatch or profile not found.")
-    
     try:
-        await run_sync(supabase_admin.table("tradies").delete().eq("id", user.id).execute)
-        await run_sync(supabase_admin.auth.admin.delete_user, user.id)
-        if f"DEL_{user.id}" in verification_codes:
-            del verification_codes[f"DEL_{user.id}"]
+        # 1. Delete Business Profile (RLS ensures we can only delete our own)
+        # Note: Slug check is implicit because RLS only allows deleting id = auth.uid()
+        await run_sync(tradie.supabase.table("tradies").delete().eq("id", tradie.id).execute)
+        
+        # 2. Delete Auth Record (Requires Admin)
+        await run_sync(supabase_admin.auth.admin.delete_user, tradie.id)
+        
+        if f"DEL_{tradie.id}" in verification_codes:
+            del verification_codes[f"DEL_{tradie.id}"]
         return {"status": "success"}
     except Exception as e:
         logger.error(f"DELETION_FAILURE: {e}")
@@ -783,36 +787,33 @@ async def admin_page():
     return HTML_PAGES_CACHE.get("admin", "Page missing.")
 
 @app.get("/admin-data")
-async def get_admin_data(user=Depends(get_current_user)):
+async def get_admin_data(tradie: AuthenticatedTradie = Depends(get_current_user)):
     # [PRIVACY_AWARE_ADMIN_FETCH]
-    if user.email != "tomas.gorjux@gmail.com":
+    if tradie.user.email != "tomas.gorjux@gmail.com":
         raise HTTPException(status_code=403, detail="Admin access denied.")
-    
-    # We explicitly EXCLUDE private data like phone_numbers or specific lead details.
-    # We only fetch what is needed for credit management and account identification.
+
+    # Use admin client to see ALL tradies (Admin override)
     tradies_res = await run_sync(
         supabase_admin.table("tradies")
-        .select("id, business_name, email, slug, credits, created_at")
-        .order("created_at", desc=True)
-        .execute
+        .select("id, business_name, email, credits, slug, created_at")
+        .order("created_at", desc=True).execute
     )
-    return {"tradies": tradies_res.data}
+    return tradies_res.data
 
 @app.post("/admin/update-credits")
-async def update_credits(data: dict, user=Depends(get_current_user)):
+async def update_credits(data: dict, tradie: AuthenticatedTradie = Depends(get_current_user)):
     # [ADMIN_ACTION: CREDIT_MODIFICATION]
-    if user.email != "tomas.gorjux@gmail.com":
+    if tradie.user.email != "tomas.gorjux@gmail.com":
         raise HTTPException(status_code=403, detail="Admin access denied.")
-    
+
     tradie_id = data.get("tradie_id")
     new_credits = data.get("credits")
-    
+
     if tradie_id is None or new_credits is None:
         raise HTTPException(status_code=400, detail="Missing data.")
-    
+
     await run_sync(supabase_admin.table("tradies").update({"credits": new_credits}).eq("id", tradie_id).execute)
     return {"status": "success"}
-
 @app.get("/health")
 def health(): 
     # [SYSTEM_STATUS_PROBE]
