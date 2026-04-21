@@ -709,28 +709,29 @@ async def serve_preview():
 async def serve_verified():
     return HTML_PAGES_CACHE.get("verified", "Page missing.")
 
-async def get_any_user(auth: HTTPAuthorizationCredentials = Depends(security)):
-    # [AUTHENTICATION_GUARD: LIGHT]
-    # Similar to get_current_user but does NOT enforce email verification.
-    if not auth or not auth.credentials or auth.credentials == "null":
-        raise HTTPException(status_code=401, detail="Session required.")
+@app.post("/update-password")
+async def update_password(data: ResetPasswordSchema, auth: HTTPAuthorizationCredentials = Depends(security)):
+    # [ACCOUNT_STATE_MUTATION]
+    # Validates the recovery token and updates the user's password.
     try:
+        # 1. Verify Identity: Use the admin client to validate the provided JWT.
+        # This is the standard procedure for verifying Supabase tokens in a custom backend.
         res = await run_sync(supabase_admin.auth.get_user, auth.credentials)
         user = getattr(res, 'user', None) or (res.get('user') if isinstance(res, dict) else None)
-        if not user: raise HTTPException(status_code=401, detail="Invalid session.")
-        return user
-    except Exception as e:
-        logger.error(f"AUTH_VERIFICATION_FAILURE: {e}")
-        raise HTTPException(status_code=401, detail="Authentication failed.")
-
-@app.post("/update-password")
-async def update_password(data: ResetPasswordSchema, user=Depends(get_any_user)):
-    # [ACCOUNT_STATE_MUTATION]
-    # Updates password. Uses supabase_admin.auth.admin to ensure the update 
-    # succeeds regardless of the user's current session state.
-    try:
+        
+        if not user:
+            logger.warning(f"PASSWORD_ROTATION_ATTEMPT_REJECTED: Invalid or expired token.")
+            raise HTTPException(status_code=401, detail="Invalid session.")
+        
+        # 2. Perform Atomic Update: Use administrative privileges to rotate the password.
         await run_sync(supabase_admin.auth.admin.update_user_by_id, user.id, {"password": data.new_password})
-        return {"status": "success"}
+        
+        # 3. Retrieve Workspace Context: Required for seamless frontend redirection.
+        tradie_res = await run_sync(supabase_admin.table("tradies").select("slug").eq("id", user.id).single().execute)
+        slug = tradie_res.data.get("slug") if tradie_res.data else None
+        
+        return {"status": "success", "slug": slug}
+    except HTTPException: raise
     except Exception as e:
         logger.error(f"PASSWORD_ROTATION_FAILURE: {e}")
         raise HTTPException(status_code=400, detail="Failed to update password.")
