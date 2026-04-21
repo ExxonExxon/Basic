@@ -63,39 +63,6 @@ This file handles the multi-step user registration and phone verification flow f
             position: relative;
         }
 
-        /* [VISUAL_EFFECTS: AMBIENT_ORBS] Decorative background elements with float animations. */
-        .orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0;
-            animation: orbFloat 1.2s ease-out forwards;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .orb-1 {
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, rgba(0,122,255,0.12) 0%, transparent 70%);
-            top: -150px; right: -100px;
-            animation-delay: 0.1s;
-        }
-        .orb-2 {
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(52,199,89,0.09) 0%, transparent 70%);
-            bottom: -100px; left: -80px;
-            animation-delay: 0.3s;
-        }
-        .orb-3 {
-            width: 320px; height: 320px;
-            background: radial-gradient(circle, rgba(255,149,0,0.07) 0%, transparent 70%);
-            top: 40%; right: -60px;
-            animation-delay: 0.5s;
-        }
-        @keyframes orbFloat {
-            from { opacity: 0; transform: scale(0.8); }
-            to   { opacity: 1; transform: scale(1); }
-        }
-
         body::before {
             content: '';
             position: fixed; inset: 0;
@@ -280,10 +247,6 @@ This file handles the multi-step user registration and phone verification flow f
 </head>
 <body>
 
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-
     <div id="loader">
         <div style="width:40px;height:40px;border:3px solid rgba(0,0,0,0.08);border-top-color:#000;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
         <span id="loader-label" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);">Creating account…</span>
@@ -307,9 +270,7 @@ This file handles the multi-step user registration and phone verification flow f
             <!-- [STEP_1: IDENTITY_ESTABLISHMENT] -->
             <div id="step-1" class="view active">
                 <div class="heading">
-                    <div style="display:inline-flex;background:var(--bg);padding:4px 10px;border-radius:99px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Step <span style="color:var(--blue);margin-left:4px;">1</span> of 2</div>
                     <h2>Create your account.</h2>
-                    <p>Takes less than 60 seconds.</p>
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:12px;">
@@ -358,7 +319,6 @@ This file handles the multi-step user registration and phone verification flow f
             <!-- [STEP_2: MFA_CHALLENGE] -->
             <div id="step-2" class="view">
                 <div class="heading">
-                    <div style="display:inline-flex;background:var(--bg);padding:4px 10px;border-radius:99px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Step <span style="color:var(--blue);margin-left:4px;">2</span> of 2</div>
                     <h2>Verify your number.</h2>
                     <p id="verify-subtitle">Enter the 6-digit code sent to your phone.</p>
                 </div>
