@@ -1078,23 +1078,22 @@
     */
 
     const API = TRADSIEE_ENV.API_BASE;
-
-    const state = {
-        slug: localStorage.getItem('tradsiee_slug'),
-        token: localStorage.getItem('tradsiee_token'),
-        leads: [],
-        credits: 0,
-        bizName: '',
-        email: '',
-        currentView: 'pipeline',
-        theme: localStorage.getItem('tradsiee_theme') || 'light',
-        isVerified: true,
-        limitsEnabled: true,
-        searchQuery: '',
-        sortBy: 'newest',
-        bulkMode: false,
-        selectedLeads: []
-    };
+const state = {
+    slug: localStorage.getItem('tradsiee_slug'),
+    token: localStorage.getItem('tradsiee_token'),
+    leads: [],
+    credits: 0,
+    bizName: '',
+    email: '',
+    phone: '',
+    currentView: 'pipeline',
+    theme: localStorage.getItem('tradsiee_theme') || 'light',
+    isVerified: true,
+    limitsEnabled: true,
+    bulkMode: false,
+    selectedLeads: [],
+    searchQuery: ''
+};
 
     // [AUTH_REDIRECT_LOGIC] Ensures session presence before initialization.
     if (!state.token || !state.slug) window.location.href = '[[PATH_LOGIN]]';
@@ -1234,6 +1233,7 @@
             state.credits = data.credits || 0;
             state.bizName = data.business_name || '';
             state.email = data.email || '';
+            state.phone = data.phone_number || '';
             state.limitsEnabled = data.limits_enabled !== false;
 
             // [DEV_ONLY] Inject mock leads if empty
@@ -1325,7 +1325,29 @@
         if (document.getElementById('modal-email')) document.getElementById('modal-email').value = state.email;
         
         if (document.getElementById('delete-confirm-slug')) document.getElementById('delete-confirm-slug').textContent = safeText(state.slug);
-        const code = `<div id="tradsiee-widget-root"></div>\n<script src="${API}/loader.js?slug=${encodeURIComponent(state.slug)}" async><\/script>`;
+        
+        // Installation Code with Offline Fallback
+        const escapedPhone = escapeHTML(formatPhoneDisplay(state.phone));
+        const cleanPhone = state.phone.replace(/\s+/g, '');
+        const code = `<div id="tradsiee-widget-root"></div>
+<script>
+    (function() {
+        var root = document.getElementById("tradsiee-widget-root");
+        var timeout = setTimeout(function() {
+            if (root && !root.querySelector("iframe")) {
+                root.innerHTML = '<div style="padding:20px; border:1.5px dashed #ccc; border-radius:16px; text-align:center; font-family:sans-serif;">' +
+                    '<h3 style="margin:0 0 8px; font-size:16px;">Oh no!</h3>' +
+                    '<p style="margin:0; font-size:14px; color:#666;">Looks like Tradsiee is having some issues. Please <a href="tel:${cleanPhone}" style="color:#007AFF; font-weight:700;">call us instead</a> at <strong>${escapedPhone}</strong></p>' +
+                    '</div>';
+            }
+        }, 5000);
+        var s = document.createElement("script");
+        s.src = "${API}/loader.js?slug=${encodeURIComponent(state.slug)}";
+        s.async = true;
+        s.onload = function() { clearTimeout(timeout); };
+        document.head.appendChild(s);
+    })();
+<\/script>`;
         if (document.getElementById('embed-code')) document.getElementById('embed-code').textContent = code;
     }
 

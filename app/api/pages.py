@@ -10,8 +10,14 @@ from app.core.dependencies import get_base_url
 router = APIRouter(tags=["Pages"])
 
 @router.get("/config.js")
-async def get_config_js():
+async def get_config_js(request: Request):
     from app.core.config import SMS_AUTH_ENABLED, API_BASE_URL
+
+    # Detect origin dynamically
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    origin = f"{scheme}://{host}"
+
     js_content = f"""
 /**
  * Tradsiee Global Configuration (Dynamically Generated)
@@ -21,8 +27,10 @@ const TRADSIEE_ENV = {{
     leadLimitsEnabled: {str(LEAD_LIMITS_ENABLED).lower()},
     smsAuthEnabled: {str(SMS_AUTH_ENABLED).lower()},
     apiBase: "{API_BASE_URL}",
+    dynamicOrigin: "{origin}",
     get API_BASE() {{
-        return this.isLocal ? "http://localhost:8000" : this.apiBase;
+        if (this.isLocal) return this.dynamicOrigin;
+        return this.apiBase;
     }}
 }};
 """
@@ -52,7 +60,11 @@ async def get_widget_bundle():
 
 @router.get("/loader.js")
 async def loader_js(request: Request, slug: str):
-    origin = f"{request.url.scheme}://{request.url.netloc}"
+    # Detect origin dynamically to handle localhost, custom domains, or proxies
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    origin = f"{scheme}://{host}"
+    
     js = f"""
 (function() {{
     window.TRADSIEE_SLUG = "{slug}";

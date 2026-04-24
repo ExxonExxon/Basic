@@ -108,7 +108,7 @@ def send_tradie_lead_alert(lead_id: str):
 
 @router.get("/get-leads/{slug}")
 async def get_leads(slug: str, limit: int = 50, offset: int = 0, tradie: AuthenticatedTradie = Depends(get_current_user)):
-    biz_res = await run_sync(supabase_admin.table("tradies").select("id, business_name, credits, email").eq("slug", slug).single().execute)
+    biz_res = await run_sync(supabase_admin.table("tradies").select("id, business_name, credits, email, phone_number").eq("slug", slug).single().execute)
     if not biz_res.data: raise HTTPException(status_code=404, detail="Not found.")
     if biz_res.data["id"] != tradie.id: raise HTTPException(status_code=403, detail="Unauthorized.")
 
