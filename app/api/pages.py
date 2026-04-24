@@ -71,11 +71,18 @@ async def loader_js(request: Request, slug: str):
     
     var iframe = document.createElement('iframe');
     iframe.src = origin + '/widget/{slug}';
-    iframe.style.cssText = 'border:none;width:100%;min-height:600px;background:transparent;';
+    iframe.style.cssText = 'border:none;width:100%;height:500px;background:transparent;overflow:hidden;transition:height 0.3s cubic-bezier(0.2,0,0,1);';
+    iframe.scrolling = 'no';
     iframe.loading = 'lazy';
-    
-    var container = document.getElementById('tradsiee-widget-root');
-    if (container) {{
+
+    window.addEventListener('message', function(e) {{
+        if (e.data && e.data.type === 'tradsiee-resize') {{
+            // Use 40px buffer for card shadows and bottom margins
+            iframe.style.height = (e.data.height + 40) + 'px';
+        }}
+    }});
+
+    var container = document.getElementById('tradsiee-widget-root');    if (container) {{
         container.appendChild(iframe);
     }} else {{
         document.currentScript ? document.currentScript.parentNode.insertBefore(iframe, document.currentScript) : document.body.appendChild(iframe);

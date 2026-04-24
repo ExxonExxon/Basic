@@ -1315,6 +1315,11 @@
         const isSelected = state.selectedLeads.includes(l.id);
         if (isSelected) div.classList.add('selected');
         div.setAttribute('data-id', l.id);
+
+        div.onclick = (e) => {
+            if (e.target.closest('.play-btn') || e.target.closest('.card-btn-icon') || e.target.closest('.no-drag')) return;
+            toggleLeadSelection(l.id);
+        };
         
         const isPending = l.status === 'pending';
         
@@ -1361,7 +1366,7 @@
                     <div class="card-phone">${escapeHTML(formatPhoneDisplay(l.customer_phone))}</div>
                     <div class="card-desc">${escapeHTML(l.customer_description || 'No description provided.')}</div>
                     
-                    <div class="card-actions" style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px;">
+                    <div class="card-actions" style="display: ${state.bulkMode ? 'none' : 'grid'}; grid-template-columns: 1fr auto auto; gap: 8px;">
                         ${l.status === 'pending' ? `
                             <button class="card-btn-primary" onclick="updateStatus('${l.id}', 'contacted')">
                                 Move to Working
@@ -1392,6 +1397,7 @@
             group: 'pipeline', animation: 200, ghostClass: 'sortable-ghost',
             forceFallback: true,
             fallbackClass: "sortable-fallback",
+            disabled: state.bulkMode, // Prevent moving leads when in selection mode
             delay: 200, delayOnTouchOnly: true,
             filter: '.no-drag',
             preventOnFilter: false,

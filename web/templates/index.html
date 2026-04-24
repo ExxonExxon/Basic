@@ -10,6 +10,12 @@ This file implements the core customer-facing interface for Tradsiee lead genera
     <title>Tradsiee Widget</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+        }
         #tradsiee-widget-root {
             font-family: 'Plus Jakarta Sans', sans-serif;
             -webkit-font-smoothing: antialiased;
@@ -235,7 +241,26 @@ This file implements the core customer-facing interface for Tradsiee lead genera
         document.querySelectorAll('.ts-progress-dot').forEach((d, i) => {
             d.classList.toggle('active', i + 1 === n); d.classList.toggle('done', i + 1 < n);
         });
+        // Notify parent to resize iframe
+        setTimeout(tsSendHeight, 50);
     }
+
+    function tsSendHeight() {
+        // Use document.body.scrollHeight to ensure the 'Powered by' footer is included
+        const height = document.body.scrollHeight;
+        window.parent.postMessage({ type: 'tradsiee-resize', height: height }, '*');
+    }
+
+    // Also send height on initial load
+    window.onload = () => {
+        tsSendHeight();
+        
+        // Watch for any changes in height (like video preview appearing)
+        const observer = new ResizeObserver(() => {
+            tsSendHeight();
+        });
+        observer.observe(document.body);
+    };
 
     async function tsHandleFile(input) {
         const file = input.files[0];
