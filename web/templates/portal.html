@@ -607,7 +607,7 @@
         </div>
         <div class="nav-item" id="nav-archive" onclick="switchView('archive')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Completed
+            Archive
         </div>
 
         <span class="nav-group-label">Account</span>
@@ -691,9 +691,16 @@
         </div>
 
         <div id="view-archive" class="view-section">
-            <!-- [VIEW: LEAD_HISTORY] 
-                 Populated via 'renderArchive()' from 'state.leads' (status: archived).
-            -->
+            <!-- [UI_UPGRADE: ARCHIVE_CONTROLS] -->
+            <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 24px; padding: 0 4px;">
+                <div style="position: relative; flex: 1; width: 100%;">
+                    <input type="text" id="archive-search" placeholder="Search archive..." 
+                           style="width: 100%; padding: 10px 16px 10px 40px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); font-size: 14px; font-weight: 600; outline: none;"
+                           oninput="state.searchQuery = this.value; renderArchive();">
+                    <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none;" 
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18" stroke-width="2.5"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+            </div>
             <div class="archive-wrap" id="archive-container"></div>
         </div>
 
@@ -831,7 +838,8 @@
         <div style="display: flex; gap: 8px;">
             <button class="btn-primary-sm" style="background: var(--blue);" onclick="openBatchSMS()">SMS Triage</button>
             <button id="bulk-btn-working" class="btn-primary-sm" style="background: var(--orange);" onclick="bulkStatusUpdate('contacted')">To Working</button>
-            <button id="bulk-btn-complete" class="btn-primary-sm" style="background: var(--green);" onclick="bulkStatusUpdate('archived')">Complete</button>
+            <button id="bulk-btn-complete" class="btn-primary-sm" style="background: var(--green);" onclick="bulkStatusUpdate('archived')">Archive</button>
+            <button id="bulk-btn-restore" class="btn-primary-sm" style="background: var(--blue);" onclick="bulkStatusUpdate('pending')">Restore</button>
             <button class="btn-primary-sm" style="background: var(--text); color: var(--card);" onclick="cancelBulk()">Cancel</button>
         </div>
     </div>
@@ -973,6 +981,7 @@
                 <ul style="list-style: none; padding: 0; margin: 8px 0; font-size: 13px; font-weight: 500; color: var(--text); opacity: 0.8; line-height: 1.8;">
                     <li>✓ 30 leads per month</li>
                     <li>✓ Standard SMS alerts</li>
+                    <li>✓ Keep archived leads forever</li>
                     <li>✓ Basic analytics</li>
                 </ul>
                 <button class="btn-primary-sm" style="width: 100%; margin-top: auto;" onclick="showToast('Connecting to payment gateway...')">Select Pro</button>
@@ -1028,6 +1037,7 @@
         currentView: 'pipeline',
         theme: localStorage.getItem('tradsiee_theme') || 'light',
         isVerified: true,
+        limitsEnabled: true,
         searchQuery: '',
         sortBy: 'newest',
         bulkMode: false,
@@ -1149,6 +1159,7 @@
             state.credits = data.credits || 0;
             state.bizName = data.business_name || '';
             state.email = data.email || '';
+            state.limitsEnabled = data.limits_enabled !== false;
 
             // [DEV_ONLY] Inject mock leads for UI testing
             if (state.leads.length < 5) {
@@ -1304,21 +1315,32 @@
         if (diffHrs < 1) freshnessClass = 'fresh-hot';
         else if (diffHrs < 24) freshnessClass = 'fresh-warm';
 
+        // Video Locking Logic (90 Days for Archived Leads on Free Plan)
+        const isLocked = state.limitsEnabled && l.status === 'archived' && (diffHrs > (90 * 24));
+
         div.innerHTML = `
             <div class="swipe-reveal right">Accept Job</div>
             <div class="swipe-reveal left">Archive</div>
+            <div class="card-checkbox no-drag ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); toggleLeadSelection('${l.id}')" style="top: 10px; right: 10px;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
             <div class="card-inner">
-                <div class="card-checkbox no-drag ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); toggleLeadSelection('${l.id}')" style="top: 10px; right: 10px;">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                </div>
-                <div class="card-video">
+                <div class="card-video" style="${isLocked ? 'filter: grayscale(1) blur(4px); pointer-events: none;' : ''}">
                     <video src="${escapeHTML(l.video_url)}" muted loop playsinline></video>
-                    <div class="play-btn no-drag" onclick="openVideo('${escapeHTML(l.video_url)}')">
-                        <svg fill="currentColor" viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z"/></svg>
-                    </div>
+                    ${isLocked ? '' : `
+                        <div class="play-btn no-drag" onclick="openVideo('${escapeHTML(l.video_url)}')">
+                            <svg fill="currentColor" viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                    `}
                 </div>
+                ${isLocked ? `
+                    <div class="no-drag" onclick="openUpgradeModal()" style="position:absolute; inset: 0; height: 115px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); color: #fff; z-index: 21; cursor: pointer; backdrop-filter: blur(2px);">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="24" height="24" stroke-width="2.5"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; margin-top: 8px; letter-spacing: 0.05em;">Unlock Video</span>
+                    </div>
+                ` : ''}
                 <div class="card-body">
                     <div class="freshness-badge">${freshnessText}</div>
                     <div class="card-name">${escapeHTML(l.first_name)} ${escapeHTML(l.last_name)}</div>
@@ -1326,15 +1348,19 @@
                     <div class="card-desc">${escapeHTML(l.customer_description || 'No description provided.')}</div>
                     
                     <div class="card-actions" style="display: grid; grid-template-columns: 1fr auto auto; gap: 8px;">
-                        ${isPending ? `
+                        ${l.status === 'pending' ? `
                             <button class="card-btn-primary" onclick="updateStatus('${l.id}', 'contacted')">
                                 Move to Working
                             </button>
-                        ` : `
+                        ` : (l.status === 'contacted' ? `
                             <button class="card-btn-primary working" onclick="updateStatus('${l.id}', 'archived')">
-                                Mark Completed
+                                Archive Lead
                             </button>
-                        `}
+                        ` : `
+                            <button class="card-btn-primary" style="background: var(--blue);" onclick="updateStatus('${l.id}', 'pending')">
+                                Restore Lead
+                            </button>
+                        `)}
                         <button class="card-btn-icon" onclick="openSMS('${l.id}')" title="Send SMS">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                         </button>
@@ -1457,19 +1483,17 @@
     }
 
     function toggleLeadSelection(id) {
-        const idx = state.selectedLeads.indexOf(id);
+        const idStr = String(id);
+        const idx = state.selectedLeads.indexOf(idStr);
         if (idx > -1) {
             state.selectedLeads.splice(idx, 1);
         } else {
-            state.selectedLeads.push(id);
+            state.selectedLeads.push(idStr);
         }
         
-        // If we just started selecting, turn on bulk mode for visuals
-        if (state.selectedLeads.length > 0) state.bulkMode = true;
-        else state.bulkMode = false;
-
+        state.bulkMode = state.selectedLeads.length > 0;
         updateBatchUI();
-        renderPipeline();
+        renderData();
     }
 
     function updateBatchUI() {
@@ -1482,19 +1506,21 @@
             count.textContent = `${state.selectedLeads.length} Selected`;
 
             // Contextual Button Visibility
-            const hasPending = state.selectedLeads.some(id => {
+            let hasPending = false, hasContacted = false, hasArchived = false;
+            state.selectedLeads.forEach(id => {
                 const l = state.leads.find(x => String(x.id) === String(id));
-                return l && l.status === 'pending';
-            });
-            const hasContacted = state.selectedLeads.some(id => {
-                const l = state.leads.find(x => String(x.id) === String(id));
-                return l && l.status === 'contacted';
+                if (!l) return;
+                if (l.status === 'pending') hasPending = true;
+                if (l.status === 'contacted') hasContacted = true;
+                if (l.status === 'archived') hasArchived = true;
             });
 
             if (document.getElementById('bulk-btn-working')) 
                 document.getElementById('bulk-btn-working').style.display = hasPending ? 'block' : 'none';
             if (document.getElementById('bulk-btn-complete'))
                 document.getElementById('bulk-btn-complete').style.display = (hasContacted || hasPending) ? 'block' : 'none';
+            if (document.getElementById('bulk-btn-restore'))
+                document.getElementById('bulk-btn-restore').style.display = hasArchived ? 'block' : 'none';
 
         } else {
             bar.classList.remove('open');
@@ -1505,7 +1531,7 @@
         state.selectedLeads = [];
         state.bulkMode = false;
         updateBatchUI();
-        renderPipeline();
+        renderData();
     }
 
     async function bulkStatusUpdate(newStatus) {
@@ -1577,13 +1603,29 @@
         if(!c) return;
         c.innerHTML = '';
         
-        // 90-day notice at the top
-        const notice = document.createElement('div');
-        notice.style = 'text-align: center; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 24px; opacity: 0.6;';
-        notice.textContent = 'Completed leads are automatically cleared after 90 days';
-        c.appendChild(notice);
+        // Deletion & Upgrade Notice (Only show if limits are enabled)
+        if (state.limitsEnabled) {
+            const notice = document.createElement('div');
+            notice.style = 'text-align: center; margin-bottom: 32px; padding: 20px; background: var(--bg); border-radius: 16px; border: 1.5px dashed var(--border);';
+            notice.innerHTML = `
+                <div style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Archive Policy</div>
+                <div style="font-size: 13px; font-weight: 600; color: var(--text); opacity: 0.8;">
+                    Contact details are kept forever. Video history is limited to 90 days. <br>
+                    <span style="color: var(--blue); cursor: pointer;" onclick="openUpgradeModal()">Upgrade to the Pro Plan</span> to unlock permanent video storage.
+                </div>            `;
+            c.appendChild(notice);
+        }
 
-        const archivedLeads = state.leads.filter(l => l.status === 'archived');
+        const archivedLeads = state.leads.filter(l => {
+            if (l.status !== 'archived') return false;
+            if (state.searchQuery) {
+                const q = state.searchQuery.toLowerCase();
+                return (l.first_name + ' ' + l.last_name).toLowerCase().includes(q) || 
+                       l.customer_phone.includes(q) ||
+                       (l.customer_description && l.customer_description.toLowerCase().includes(q));
+            }
+            return true;
+        });
         
         if (archivedLeads.length === 0) {
             const empty = document.createElement('div');
@@ -1592,20 +1634,20 @@
                 <div style="width: 64px; height: 64px; background: var(--bg); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; opacity: 0.5;">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="32" height="32" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
                 </div>
-                <div style="font-weight: 800; color: var(--text); margin-bottom: 4px;">No Completed Jobs</div>
-                <div style="font-size: 13px; font-weight: 500; max-width: 240px; line-height: 1.5;">Finish some jobs in your workflow and they will show up here.</div>
+                <div style="font-weight: 800; color: var(--text); margin-bottom: 4px;">No Archived Jobs</div>
+                <div style="font-size: 13px; font-weight: 500; max-width: 240px; line-height: 1.5;">Leads you archive from your workflow will show up here.</div>
             `;
             c.appendChild(empty);
             return;
         }
 
+        // Use a grid for archive cards
+        const grid = document.createElement('div');
+        grid.style = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;';
         archivedLeads.forEach(l => {
-            const row = document.createElement('div');
-            row.className = 'archive-row';
-            row.innerHTML = `<div><strong>${escapeHTML(l.first_name)} ${escapeHTML(l.last_name)}</strong><small>${escapeHTML(l.customer_phone)}</small></div>
-                             <button class="btn-primary-sm" onclick="updateStatus('${l.id}', 'pending')">Restore</button>`;
-            c.appendChild(row);
+            grid.appendChild(buildCard(l));
         });
+        c.appendChild(grid);
     }
 
     async function updateStatus(id, s) {
@@ -1863,12 +1905,16 @@
 
     function switchView(v) {
         state.currentView = v;
+        state.searchQuery = ''; // Clear search when switching
+        if (document.getElementById('lead-search')) document.getElementById('lead-search').value = '';
+        if (document.getElementById('archive-search')) document.getElementById('archive-search').value = '';
+
         ['pipeline', 'archive', 'settings'].forEach(n => {
             if(document.getElementById(`nav-${n}`)) document.getElementById(`nav-${n}`).classList.toggle('active', n === v);
             if(document.getElementById(`m-nav-${n}`)) document.getElementById(`m-nav-${n}`).classList.toggle('active', n === v);
             if(document.getElementById(`view-${n}`)) document.getElementById(`view-${n}`).classList.toggle('active', n === v);
         });
-        document.getElementById('view-title').textContent = v === 'pipeline' ? 'Workflow' : (v === 'archive' ? 'Completed' : v.charAt(0).toUpperCase() + v.slice(1));
+        document.getElementById('view-title').textContent = v === 'pipeline' ? 'Workflow' : (v === 'archive' ? 'Archive' : v.charAt(0).toUpperCase() + v.slice(1));
         renderData();
     }
 

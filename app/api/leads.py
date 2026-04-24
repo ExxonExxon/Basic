@@ -45,10 +45,11 @@ async def get_leads(slug: str, limit: int = 50, offset: int = 0, tradie: Authent
         .order("created_at", desc=True).range(offset, offset + limit - 1).execute
     )
     return {
-        "business_name": biz_res.data["business_name"], 
-        "credits": biz_res.data["credits"], 
+        "business_name": biz_res.data["business_name"],
+        "credits": biz_res.data["credits"],
         "email": tradie.user.email,
-        "leads": leads_res.data
+        "leads": leads_res.data,
+        "limits_enabled": LEAD_LIMITS_ENABLED
     }
 
 @router.post("/submit-lead-data/{slug}")
