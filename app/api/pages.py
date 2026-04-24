@@ -113,7 +113,7 @@ async def get_widget_ui(slug: str):
     content = content.replace('[[BUSINESS_NAME]]', biz_name)
     content = content.replace('[[BUSINESS_INITIAL]]', biz_initial)
     
-    return content
+    return HTMLResponse(content=content)
 
 @router.get("/", response_class=HTMLResponse)
 async def serve_home():

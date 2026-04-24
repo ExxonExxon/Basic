@@ -1,15 +1,18 @@
 import os
 import re
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.exceptions import HTTPException
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import (
     logger, WIDGET_TEMPLATE_CACHE, HTML_PAGES_CACHE
 )
 from app.api import auth, leads, admin, pages
+from app.core.video_processor import process_video_queue_worker
 
 # --- Lifespan Management ---
 
@@ -18,6 +21,11 @@ async def lifespan(app: FastAPI):
     # [STARTUP_PROCEDURES]
     # Executed on application boot. Validates the environment and prepares the template cache.
     try:
+        # Initialize the sequential processing queue
+        app.state.video_queue = asyncio.Queue()
+        # Start the background worker (one-by-one processing)
+        asyncio.create_task(process_video_queue_worker(app.state.video_queue))
+
         global WIDGET_TEMPLATE_CACHE, HTML_PAGES_CACHE
         
         required_env = [
@@ -68,6 +76,7 @@ async def lifespan(app: FastAPI):
 # --- FastAPI Initialization ---
 
 app = FastAPI(title="Tradsiee_Engine_v1.2", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
 # --- Middleware ---
 
@@ -81,6 +90,12 @@ app.add_middleware(
 )
 
 # --- Exception Handlers ---
+
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc: Exception):
+    if request.url.path.endswith(".js"):
+        return PlainTextResponse("// Resource not found", media_type="application/javascript", status_code=404)
+    return JSONResponse(status_code=404, content={"detail": "Not found"})
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

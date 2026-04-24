@@ -32,7 +32,8 @@ class UpdateAccountSchema(BaseModel):
     password: Optional[constr(min_length=8)] = None
 
 class LeadData(BaseModel):
-    video_url: str
+    video_url: Optional[str] = None
+    temp_video_id: Optional[str] = None
     customer_phone: str
     customer_description: constr(max_length=1000) = "No description"
     first_name: str = ""

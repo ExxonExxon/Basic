@@ -1,24 +1,6 @@
 <!-- 
 [LEAD_SUBMISSION_WIDGET_SPECIFICATION]
 This file implements the core customer-facing interface for Tradsiee lead generation.
-It is architected as a high-friction, multi-step wizard designed to qualify intent 
-through video-based problem descriptions.
-
-[ARCHITECTURAL_WORKFLOW]
-- Step 1 (Identification): Captures lead contact identity (E.164 phone normalization).
-- Step 2 (Payload Ingestion): Orchestrates the acquisition of the primary lead asset (video) 
-  and qualitative context (textual description). 
-- Step 3 (Terminal Success): Final confirmation of lead receipt and persistence.
-
-[MULTIMEDIA_PIPELINE_ENGINE]
-- Direct-to-Cloud Upload: Implements an unsigned client-side upload strategy to Cloudinary.
-- Adaptive Transmission: Automatically switches between single-stream and chunked 
-  (multipart) uploading based on a 95MB file size threshold to ensure 4K asset integrity.
-- Real-time Progress Instrumentation: Uses XHR event listeners to drive reactive UI progress bars.
-
-[STATE_MANAGEMENT_STRATEGY]
-- Transition Logic: Managed via the 'tsGoStep(n)' orchestration function.
-- Data Aggregation: Collects transient DOM state into a final JSON payload for the FastAPI backend.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -26,13 +8,8 @@ through video-based problem descriptions.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tradsiee Widget</title>
-    <!-- [SECURITY_BYPASS: COOP/COEP_AUTOMATION] -->
-    <script src="/coi-serviceworker.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
     <style>
-        /* [WIDGET_CSS_SCOPE] 
-           Fully isolated styling to prevent collisions when embedded on 3rd party host sites.
-        */
         #tradsiee-widget-root {
             font-family: 'Plus Jakarta Sans', sans-serif;
             -webkit-font-smoothing: antialiased;
@@ -90,9 +67,6 @@ through video-based problem descriptions.
             </div>
         </div>
 
-        <!-- [UI_COMPONENT: PROGRESS_STREAK] 
-             Updates via tsGoStep logic to provide visual context of wizard progression.
-        -->
         <div class="ts-progress">
             <div class="ts-progress-dot active" id="prog-1"></div>
             <div class="ts-progress-dot" id="prog-2"></div>
@@ -100,9 +74,6 @@ through video-based problem descriptions.
             <div class="ts-progress-dot" id="prog-4"></div>
         </div>
 
-        <!-- [STEP_1: IDENTITY_ACQUISITION] 
-             Captures primary lead metadata.
-        -->
         <div class="ts-step active" id="step-1">
             <div style="display:flex;flex-direction:column;gap:16px;">
                 <div>
@@ -123,7 +94,6 @@ through video-based problem descriptions.
             </div>
         </div>
 
-        <!-- [STEP_2: PHONE_VERIFICATION] -->
         <div class="ts-step" id="step-2">
             <div style="display:flex;flex-direction:column;gap:16px;">
                 <div>
@@ -139,20 +109,14 @@ through video-based problem descriptions.
             </div>
         </div>
 
-        <!-- [STEP_3: PAYLOAD_AQUISITION] 
-             Manages binary video data and textual problem descriptions.
-        -->
         <div class="ts-step" id="step-3">
             <div style="display:flex;flex-direction:column;gap:12px;">
                 <div class="ts-upload-zone" id="ts-upload-zone">
                     <input type="file" accept="video/*" capture="environment" id="ts-file-input" onchange="tsHandleFile(this)">
                     <div style="font-size:13px;font-weight:700;">Tap to record or upload video</div>
-                    <div style="font-size:11px;color:#8E8E93;">Maximum size: 200MB</div>
+                    <div style="font-size:11px;color:#8E8E93;">Maximum size: 500MB</div>
                 </div>
 
-                <!-- [UI_COMPONENT: UPLOAD_INSTRUMENTATION] 
-                     Visualizes the background XHR upload progress to Cloudinary.
-                -->
                 <div class="ts-upload-progress" id="ts-upload-progress">
                     <div class="ts-upload-progress-track"><div class="ts-upload-progress-fill" id="ts-progress-fill"></div></div>
                     <div style="display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:#8E8E93;margin-top:6px;">
@@ -177,7 +141,6 @@ through video-based problem descriptions.
             </div>
         </div>
 
-        <!-- [STEP_4: TERMINATION_SUCCESS] -->
         <div class="ts-step" id="step-4">
             <div style="text-align:center;padding:12px 0;">
                 <div style="width:64px;height:64px;background:#F2F2F7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
@@ -192,34 +155,18 @@ through video-based problem descriptions.
 </div>
 
     <script src="/config.js"></script>
-    <!-- [VIDEO_PROCESSING_ENGINE: ON_DEVICE_1080P] -->
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/umd/ffmpeg.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 <script>
     /* [SCRIPT_SPECIFICATION]
        Handles the stateful orchestration of the lead-capture widget.
        Manages local wizard navigation, Cloudinary media transmission, and backend persistence.
     */
 
-    const { FFmpeg } = FFmpegWASM;
-    const { fetchFile, toBlobURL } = FFmpegUtil;
-    let ffmpeg = null;
-
-    async function initFFmpeg() {
-        if (ffmpeg) return;
-        ffmpeg = new FFmpeg();
-        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-        await ffmpeg.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-            workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript')
-        });
-    }
-
     const TS_API = TRADSIEE_ENV.API_BASE;
+    console.log("TS_DEBUG: Widget Script Initialized. API:", TS_API);
 
     // Configuration resolution from environment injection.
     const TS_SLUG          = (new URLSearchParams(window.location.search)).get('slug') || window.TRADSIEE_SLUG || "[[SLUG_PLACEHOLDER]]";
+
     let TS_CLOUD_NAME    = "[[CLOUD_NAME]]";
     let TS_UPLOAD_PRESET = "[[UPLOAD_PRESET]]";
 
@@ -233,61 +180,34 @@ through video-based problem descriptions.
         const first = document.getElementById('ts-first').value.trim();
         const phone = document.getElementById('ts-phone').value.trim();
         const btn = document.getElementById('ts-step1-btn');
-        
         if (first.length > 0 && phone.length >= 8) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
+            btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
         } else {
-            btn.disabled = true;
-            btn.style.opacity = '0.4';
-            btn.style.cursor = 'not-allowed';
+            btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed';
         }
     }
 
     async function tsSendVerification() {
+        console.log("TS_DEBUG: Starting SMS verification...");
         if (TRADSIEE_ENV.smsAuthEnabled === false) {
-            tsVerifyCode("000000");
-            return;
+            console.log("TS_DEBUG: SMS Auth Disabled, bypassing.");
+            tsVerifyCode("000000"); return;
         }
         const phone = document.getElementById('ts-dial').value + document.getElementById('ts-phone').value.replace(/\s+/g, '');
         const btn = document.getElementById('ts-step1-btn');
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-
+        btn.disabled = true; btn.textContent = 'Sending...';
         try {
             const res = await fetch(`${TS_API}/send-verification`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: phone })
             });
             if (res.ok) {
+                console.log("TS_DEBUG: SMS Code Sent successfully to", phone);
                 document.getElementById('ts-verify-phone').textContent = phone;
                 tsGoStep(2);
-            } else if (res.status === 429) {
-                alert("You're requesting too many codes. Please wait a moment.");
-            } else {
-                alert("Failed to send verification code. Please check your number.");
-            }
-        } catch(e) {
-            alert("Network error. Please try again.");
-        }
-        btn.textContent = 'Continue';
-        btn.disabled = false;
-    }
-
-    function tsValidateStep2() {
-        const code = document.getElementById('ts-code').value.trim();
-        const btn = document.getElementById('ts-step2-btn');
-        if (code.length === 6) {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-            btn.style.cursor = 'pointer';
-        } else {
-            btn.disabled = true;
-            btn.style.opacity = '0.4';
-            btn.style.cursor = 'not-allowed';
-        }
+            } else { console.error("TS_DEBUG: SMS API Error:", res.status); alert("Failed to send verification code."); }
+        } catch(e) { console.error("TS_DEBUG: SMS Network Error:", e); alert("Network error."); }
+        btn.textContent = 'Continue'; btn.disabled = false;
     }
 
     async function tsVerifyCode(forcedCode = null) {
@@ -296,186 +216,91 @@ through video-based problem descriptions.
         const btn = document.getElementById('ts-step2-btn');
         const label = document.getElementById('ts-verify-label');
         const spinner = document.getElementById('ts-verify-spinner');
-
-        btn.disabled = true;
-        label.style.display = 'none';
-        spinner.style.display = 'block';
-
+        console.log("TS_DEBUG: Verifying code:", code);
+        btn.disabled = true; label.style.display = 'none'; spinner.style.display = 'block';
         try {
             const res = await fetch(`${TS_API}/verify-customer-code`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone: phone, code: code })
             });
-            if (res.ok) {
-                tsGoStep(3);
-            } else {
-                alert("Invalid verification code. Please try again.");
-            }
-        } catch(e) {
-            alert("Network error. Please try again.");
-        }
-        
-        label.style.display = 'block';
-        spinner.style.display = 'none';
-        btn.disabled = false;
+            if (res.ok) { console.log("TS_DEBUG: Code verified. Moving to upload."); tsGoStep(3); }
+            else { console.warn("TS_DEBUG: Invalid verification code."); alert("Invalid verification code. Please try again."); }
+        } catch(e) { console.error("TS_DEBUG: Verify API Network Error:", e); alert("Network error."); }
+        label.style.display = 'block'; spinner.style.display = 'none'; btn.disabled = false;
     }
 
-    /* [WIZARD_NAVIGATOR] 
-       Toggles active functional views and updates progress visual indicators.
-    */
     function tsGoStep(n) {
+        console.log("TS_DEBUG: Navigating to Step", n);
         document.querySelectorAll('.ts-step').forEach((s, i) => s.classList.toggle('active', i + 1 === n));
         document.querySelectorAll('.ts-progress-dot').forEach((d, i) => {
-            d.classList.toggle('active', i + 1 === n);
-            d.classList.toggle('done', i + 1 < n);
+            d.classList.toggle('active', i + 1 === n); d.classList.toggle('done', i + 1 < n);
         });
     }
 
-    /* [MEDIA_ACQUISITION_HANDLER] */
     async function tsHandleFile(input) {
         const file = input.files[0];
         if (!file) return;
-
-        const status = document.getElementById('ts-progress-status');
+        console.log("TS_DEBUG: File selected", { name: file.name, size: (file.size / (1024 * 1024)).toFixed(2) + " MB" });
         const container = document.getElementById('ts-upload-progress');
-        
         container.style.display = 'block';
-        status.textContent = 'Optimizing Video...';
-        status.style.color = '#007AFF';
-
-        try {
-            await initFFmpeg();
-            
-            // Write to virtual filesystem
-            await ffmpeg.writeFile('input', await fetchFile(file));
-            
-            // Scale to 1080p preserving aspect ratio
-            // 'scale=-2:1080' ensures the width is divisible by 2
-            await ffmpeg.exec(['-i', 'input', '-vf', 'scale=-2:1080', '-c:v', 'libx264', '-crf', '23', '-preset', 'veryfast', 'output.mp4']);
-            
-            const data = await ffmpeg.readFile('output.mp4');
-            tsFileToUpload = new File([data.buffer], 'optimized_job.mp4', { type: 'video/mp4' });
-
-            document.getElementById('ts-video-el').src = URL.createObjectURL(tsFileToUpload);
-            document.getElementById('ts-upload-zone').style.display = 'none';
-            document.getElementById('ts-video-preview').style.display = 'block';
-            
-            status.textContent = 'Ready to send';
-            status.style.color = '#34C759';
-        } catch (e) {
-            console.error("Transcode Error:", e);
-            tsFileToUpload = file;
-            document.getElementById('ts-video-el').src = URL.createObjectURL(file);
-            document.getElementById('ts-upload-zone').style.display = 'none';
-            document.getElementById('ts-video-preview').style.display = 'block';
-            status.textContent = 'Processing skipped';
-            status.style.color = '#8E8E93';
-        }
+        tsFileToUpload = file;
+        document.getElementById('ts-video-el').src = URL.createObjectURL(file);
+        document.getElementById('ts-upload-zone').style.display = 'none';
+        document.getElementById('ts-video-preview').style.display = 'block';
+        document.getElementById('ts-progress-status').textContent = 'Ready to send';
+        console.log("TS_DEBUG: File ready for direct Cloudinary upload.");
     }
 
     function tsRetakeVideo() {
-        tsFileToUpload = null;
+        tsFileToUpload = null; tsUploadResult = null;
         document.getElementById('ts-file-input').value = '';
-        document.getElementById('ts-video-el').src = '';
         document.getElementById('ts-video-preview').style.display = 'none';
         document.getElementById('ts-upload-zone').style.display = 'block';
         document.getElementById('ts-upload-progress').style.display = 'none';
-        tsUploadPromise = null;
-        tsUploadResult = null;
-        if (tsActiveXhr) {
-            tsActiveXhr.abort();
-            tsActiveXhr = null;
-        }
+        if (tsActiveXhr) tsActiveXhr.abort();
     }
 
-    /* [UPLOAD_STRATEGY: SINGLE_STREAM] */
     function tsUploadSingle(fill, pct, status) {
         return new Promise((resolve, reject) => {
-            const fd = new FormData();
-            fd.append('file', tsFileToUpload);
-            fd.append('upload_preset', TS_UPLOAD_PRESET);
-            const xhr = new XMLHttpRequest();
-            tsActiveXhr = xhr;
+            console.log("TS_DEBUG: Starting Cloudinary Single-Stream Upload...");
+            const fd = new FormData(); fd.append('file', tsFileToUpload); fd.append('upload_preset', TS_UPLOAD_PRESET);
+            const xhr = new XMLHttpRequest(); tsActiveXhr = xhr;
             xhr.open('POST', `https://api.cloudinary.com/v1_1/${TS_CLOUD_NAME}/video/upload`);
             xhr.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
                     const p = Math.min(Math.round((e.loaded / e.total) * 100), 99);
-                    fill.style.width = p + '%';
-                    pct.textContent  = p + '%';
-                    if (p === 99) status.textContent = 'Processing video... this may take a moment.';
+                    fill.style.width = p + '%'; pct.textContent = p + '%';
                 }
             };
             xhr.onload = () => {
-                if (xhr.status === 200) {
-                    resolve(JSON.parse(xhr.responseText));
-                } else {
-                    console.error("Cloudinary Upload Error:", xhr.responseText);
-                    status.textContent = 'Upload failed.';
-                    status.style.color = '#FF3B30';
-                    reject(new Error(xhr.responseText));
-                }
-            };
-            xhr.onerror = (e) => {
-                console.error("Cloudinary Network Error", e);
-                status.textContent = 'Network error.';
-                status.style.color = '#FF3B30';
-                reject(new Error("Network error"));
+                if (xhr.status === 200) { console.log("TS_DEBUG: Single upload success."); resolve(JSON.parse(xhr.responseText)); }
+                else { console.error("TS_DEBUG: Cloudinary Error:", xhr.responseText); reject(new Error(xhr.responseText)); }
             };
             xhr.send(fd);
         });
     }
 
-    /* [UPLOAD_STRATEGY: CHUNKED_STREAM] 
-       Supports large assets (>95MB) through sequential byte-range transmission.
-    */
     async function tsUploadChunked(fill, pct, status) {
-        const CHUNK = 32 * 1024 * 1024; 
-        const total = tsFileToUpload.size;
-        const count = Math.ceil(total / CHUNK);
-        const uid   = Math.random().toString(36).substring(2, 15);
-        let res     = null;
-
+        const CHUNK = 32 * 1024 * 1024; const total = tsFileToUpload.size;
+        const count = Math.ceil(total / CHUNK); const uid = Math.random().toString(36).substring(2, 15);
+        let res = null; console.log(`TS_DEBUG: Starting Chunked Upload (${count} parts)...`);
         for (let i = 0; i < count; i++) {
-            const start = i * CHUNK;
-            const end   = Math.min(start + CHUNK, total);
-            const fd    = new FormData();
-            fd.append('file', tsFileToUpload.slice(start, end));
-            fd.append('upload_preset', TS_UPLOAD_PRESET);
-
+            const start = i * CHUNK; const end = Math.min(start + CHUNK, total);
+            const fd = new FormData(); fd.append('file', tsFileToUpload.slice(start, end)); fd.append('upload_preset', TS_UPLOAD_PRESET);
             res = await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                tsActiveXhr = xhr;
+                const xhr = new XMLHttpRequest(); tsActiveXhr = xhr;
                 xhr.open('POST', `https://api.cloudinary.com/v1_1/${TS_CLOUD_NAME}/video/upload`);
-                xhr.setRequestHeader('X-Unique-Upload-Id', uid);
-                xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${total}`);
+                xhr.setRequestHeader('X-Unique-Upload-Id', uid); xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${total}`);
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
                         const p = Math.min(Math.round(((start + e.loaded) / total) * 100), 99);
-                        fill.style.width = p + '%';
-                        pct.textContent  = p + '%';
-                        if (p === 99) {
-                            status.textContent = 'Processing video... this may take a moment.';
-                        } else {
-                            status.textContent = `Uploading part ${i+1}/${count}...`;
-                        }
+                        fill.style.width = p + '%'; pct.textContent = p + '%';
+                        status.textContent = `Uploading part ${i+1}/${count}...`;
                     }
                 };
                 xhr.onload = () => {
-                    if (xhr.status === 200) {
-                        resolve(JSON.parse(xhr.responseText));
-                    } else {
-                        console.error("Cloudinary Chunk Error:", xhr.responseText);
-                        status.textContent = 'Upload failed.';
-                        status.style.color = '#FF3B30';
-                        reject(new Error(xhr.responseText));
-                    }
-                };
-                xhr.onerror = (e) => {
-                    console.error("Cloudinary Network Error", e);
-                    status.textContent = 'Network error.';
-                    status.style.color = '#FF3B30';
-                    reject(new Error("Network error"));
+                    if (xhr.status === 200) { console.log(`TS_DEBUG: Part ${i+1} uploaded.`); resolve(JSON.parse(xhr.responseText)); }
+                    else { console.error("TS_DEBUG: Chunk Error:", xhr.responseText); reject(new Error(xhr.responseText)); }
                 };
                 xhr.send(fd);
             });
@@ -483,68 +308,71 @@ through video-based problem descriptions.
         return res;
     }
 
-    /* [UPLOAD_ORCHESTRATOR] */
     async function tsStartUpload() {
         if (!tsFileToUpload) return;
-        if (tsActiveXhr) tsActiveXhr.abort();
         const fill = document.getElementById('ts-progress-fill');
-        const pct  = document.getElementById('ts-progress-pct');
+        const pct = document.getElementById('ts-progress-pct');
         const status = document.getElementById('ts-progress-status');
-        document.getElementById('ts-upload-progress').style.display = 'block';
-        status.textContent = 'Uploading...';
-        status.style.color = '#8E8E93';
         
-        try {
-            tsUploadPromise = tsFileToUpload.size > 95 * 1024 * 1024
-                ? tsUploadChunked(fill, pct, status)
-                : tsUploadSingle(fill, pct, status);
-                
-            const result = await tsUploadPromise;
-            tsUploadResult = result;
-            fill.style.width = '100%';
-            pct.textContent = '100%';
-            status.textContent = 'Ready!';
-            status.style.color = '#34C759';
-            return result;
-        } catch (error) {
-            // The error is already logged and displayed in the UI by the upload functions
-            tsUploadResult = null;
-        }
+        console.log("TS_DEBUG: Uploading raw file to Render server...");
+        
+        return new Promise((resolve, reject) => {
+            const fd = new FormData();
+            fd.append('video', tsFileToUpload);
+            
+            const xhr = new XMLHttpRequest();
+            tsActiveXhr = xhr;
+            
+            // New endpoint on your FastAPI server
+            xhr.open('POST', `${TS_API}/upload-raw-video`);
+            
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const p = Math.round((e.loaded / e.total) * 100);
+                    fill.style.width = p + '%';
+                    pct.textContent = p + '%';
+                    status.textContent = p < 100 ? `Uploading to server...` : 'Processing on server...';
+                }
+            };
+            
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    const res = JSON.parse(xhr.responseText);
+                    console.log("TS_DEBUG: Server received raw file. ID:", res.temp_id);
+                    resolve(res);
+                } else {
+                    console.error("TS_DEBUG: Server Upload Error:", xhr.responseText);
+                    reject(new Error("Server upload failed"));
+                }
+            };
+            
+            xhr.onerror = () => reject(new Error("Network error"));
+            xhr.send(fd);
+        });
     }
 
-    /* [LEAD_PERSISTENCE_TRANSACTION] 
-       Submits aggregated lead data to the backend API.
-    */
     async function tsSubmit() {
         if (!tsFileToUpload) return;
         const btn = document.getElementById('ts-submit-btn');
-        const btnLabel = document.getElementById('ts-btn-label');
         const spinner = document.getElementById('ts-spinner');
+        const btnLabel = document.getElementById('ts-btn-label');
         
         btn.disabled = true;
         btnLabel.style.display = 'none';
         spinner.style.display = 'block';
         
         try {
-            // Wait for or trigger the upload
-            if (!tsUploadResult) {
-                if (!tsUploadPromise) {
-                    await tsStartUpload();
-                } else {
-                    await tsUploadPromise;
-                }
-            }
-            
-            // If upload failed, abort
-            if (!tsUploadResult || !tsUploadResult.secure_url) {
-                throw new Error("Upload failed");
-            }
+            // 1. Upload raw file to our server first
+            const uploadRes = await tsStartUpload();
+            if (!uploadRes || !uploadRes.temp_id) throw new Error("Upload failed");
 
+            // 2. Send lead data with the temporary file ID
+            console.log("TS_DEBUG: Finalizing lead submission...");
             const res = await fetch(`${TS_API}/submit-lead-data/${TS_SLUG}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    video_url:            tsUploadResult.secure_url,
+                    temp_video_id:        uploadRes.temp_id,
                     customer_phone:       document.getElementById('ts-dial').value + document.getElementById('ts-phone').value,
                     customer_description: document.getElementById('ts-desc').value,
                     first_name:           document.getElementById('ts-first').value,
@@ -553,21 +381,20 @@ through video-based problem descriptions.
             });
             
             if (res.ok) {
+                console.log("TS_DEBUG: Success! Lead queued for local compression.");
                 tsGoStep(4);
-            } else if (res.status === 429) {
-                alert("You're sending too many requests. Please wait a moment.");
             } else {
                 throw new Error("API failed");
             }
         } catch (e) { 
-            alert('Submission failed. Please check your connection and try again.'); 
+            console.error("TS_DEBUG: Submission Error:", e);
+            alert('Submission failed. Please try again.'); 
         } finally {
             btn.disabled = false;
             btnLabel.style.display = 'block';
             spinner.style.display = 'none';
         }
     }
-
 </script>
 </body>
 </html>
