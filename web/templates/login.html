@@ -88,19 +88,12 @@ orchestrating login, password recovery, and session establishment.
             transform: translateY(-12px);
             animation: slideDown 0.6s cubic-bezier(0.2,0,0,1) 0.1s forwards;
         }
-        .logo-mark {
-            width: 44px; height: 44px; background: #000; border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-weight: 900; font-size: 22px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            position: relative; overflow: hidden;
-        }
-        .logo-name { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: var(--text); }
+        .logo-name { font-size: 24px; font-weight: 900; letter-spacing: -0.6px; color: var(--text); }
 
         /* [UI_COMPONENT: AUTH_CARD] */
         .card {
-            background: var(--card); border-radius: 32px; border: 1px solid var(--border);
-            box-shadow: 0 2px 0 rgba(255,255,255,0.8) inset, 0 20px 60px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+            background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
             padding: 40px; opacity: 0; transform: translateY(16px) scale(0.98);
             animation: cardRise 0.7s cubic-bezier(0.2,0,0,1) 0.25s forwards;
         }
@@ -116,14 +109,14 @@ orchestrating login, password recovery, and session establishment.
         .heading p { font-size: 14px; font-weight: 500; color: var(--muted); margin-top: 6px; }
 
         /* [UI_COMPONENT: INPUT_FIELDS] */
-        .field { position: relative; margin-bottom: 12px; }
-        .field label { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 7px; }
+        .field { position: relative; margin-bottom: 20px; }
+        .field label { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 8px; }
         .field input {
-            width: 100%; padding: 15px 18px; border-radius: 16px; border: 1.5px solid var(--border);
+            width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border);
             background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px;
-            font-weight: 600; color: var(--text); outline: none; transition: all 0.25s cubic-bezier(0.2,0,0,1);
+            font-weight: 600; color: var(--text); outline: none; transition: all 0.2s cubic-bezier(0.2,0,0,1);
         }
-        .field input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 4px rgba(0,122,255,0.1); transform: translateY(-1px); }
+        .field input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 4px rgba(0,122,255,0.1); }
         .field input.error { border-color: var(--red); box-shadow: 0 0 0 4px rgba(255,59,48,0.1); }
 
         /* [UI_COMPONENT: PASSWORD_TOGGLE] */
@@ -138,13 +131,22 @@ orchestrating login, password recovery, and session establishment.
 
         /* [UI_COMPONENT: PRIMARY_BUTTONS] */
         .btn-primary {
-            width: 100%; padding: 16px; border-radius: 18px; border: none; background: #000; color: #fff;
-            font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer;
+            width: 100%; padding: 15px; border-radius: 12px; border: none; background: #000; color: #fff;
+            font-weight: 700; text-transform: none; letter-spacing: -0.2px; cursor: pointer;
             margin-top: 8px; position: relative; overflow: hidden;
-            transition: all 0.25s cubic-bezier(0.2,0,0,1);
+            transition: all 0.2s cubic-bezier(0.2,0,0,1);
             display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-size: 14px;
         }
-        .btn-primary:hover { background: #1C1C1E; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .btn-primary:hover { background: #1C1C1E; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-secondary {
+            width: 100%; height: 50px; background: none; border: 1.5px solid var(--border);
+            border-radius: 12px; color: var(--text); font-weight: 700; font-size: 13px;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-secondary:hover { background: var(--bg); border-color: var(--muted); }
 
         .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -180,7 +182,6 @@ orchestrating login, password recovery, and session establishment.
 
     <div class="container">
         <div class="logo-wrap">
-            <div class="logo-mark">B</div>
             <span class="logo-name">Tradsiee</span>
         </div>
 
@@ -217,15 +218,15 @@ orchestrating login, password recovery, and session establishment.
 
             <!-- [VIEW: RECOVERY_INTERFACE] -->
             <div id="forgot-view" class="view">
-                <button style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted);background:none;border:none;margin-bottom:24px;cursor:pointer;" onclick="switchTo('login')">
+                <button style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted);background:none;border:none;margin-bottom:32px;cursor:pointer;" onclick="switchTo('login')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                    Back to Login
+                    Back to Sign In
                 </button>
                 <div class="heading">
                     <h2 style="font-size:28px; font-weight:900; letter-spacing:-0.7px;">Recover Account</h2>
-                    <p>Enter your professional email to receive a secure recovery link.</p>
+                    <p style="margin-top: 10px;">Enter your professional email to receive a secure recovery link.</p>
                 </div>
-                <div class="field">
+                <div class="field" style="margin-bottom: 32px;">
                     <label>Professional Email</label>
                     <input type="email" id="reset-email" placeholder="you@business.com">
                 </div>
@@ -237,40 +238,40 @@ orchestrating login, password recovery, and session establishment.
 
             <!-- [VIEW: SUCCESS_FEEDBACK] -->
             <div id="sent-view" class="view">
-                <div style="text-align:center; padding: 20px 0;">
-                    <div style="width:72px; height:72px; background:var(--blue-light); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; color:var(--blue);">
-                        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <div style="text-align:center; padding: 12px 0;">
+                    <div style="width:64px; height:64px; background:var(--blue-light); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; color:var(--blue);">
+                        <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     </div>
-                    <h2 style="font-size:26px; font-weight:900; letter-spacing:-0.6px; margin-bottom:12px;">Link Dispatched</h2>
+                    <h2 style="font-size:24px; font-weight:900; letter-spacing:-0.6px; margin-bottom:12px;">Link Dispatched</h2>
                     <p style="font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:32px;">
-                        If an account is associated with <span id="display-reset-email" style="color:var(--text); font-weight:700;">your email</span>, a secure recovery link has been sent. If you do not receive it shortly, please verify your email address or check your junk folder.
+                        If an account is associated with <span id="display-reset-email" style="color:var(--text); font-weight:700;">your email</span>, a secure recovery link has been sent.
                     </p>
                     
-                    <button class="btn-primary" onclick="switchTo('login')">Return to Login</button>
+                    <button class="btn-primary" onclick="switchTo('login')">Return to Sign In</button>
                     
-                    <p style="margin-top:28px; font-size:12px; color:var(--muted); font-weight:600;">
-                        Didn't get it? <button onclick="handleReset()" style="color:var(--blue); background:none; border:none; font-weight:800; cursor:pointer; text-transform:uppercase; letter-spacing:0.05em; font-size:11px; padding: 4px 8px; border-radius: 8px; background: var(--blue-light);">Resend Link</button>
+                    <p style="margin-top:32px; font-size:12px; color:var(--muted); font-weight:600;">
+                        Didn't receive the email? <button onclick="handleReset()" style="color:var(--blue); background:none; border:none; font-weight:800; cursor:pointer; text-transform:none; font-size:12px; padding: 4px 0; border-bottom: 1.5px solid var(--blue-light);">Resend Link</button>
                     </p>
                 </div>
             </div>
 
             <!-- [VIEW: RECOVERY_SHIELD] -->
             <div id="reactivate-view" class="view">
-                <div style="text-align:center;">
-                    <div style="width:80px; height:80px; background:rgba(255,159,10,0.1); border-radius:24px; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; color:#FF9F0A;">
-                        <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div style="text-align:center; padding: 12px 0;">
+                    <div style="width:72px; height:72px; background:rgba(255,159,10,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px; color:#FF9F0A;">
+                        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h2 style="font-size:26px; font-weight:900; letter-spacing:-0.6px; margin-bottom:12px;">Account scheduled for removal</h2>
-                    <p id="reactivate-desc" style="font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:32px;">
-                        This account is currently in a 90-day grace period. All data is preserved, but will be permanently deleted on <span id="removal-date" style="color:var(--text); font-weight:700;">—</span>.
+                    <h2 style="font-size:24px; font-weight:900; letter-spacing:-0.6px; margin-bottom:12px;">Account scheduled for removal</h2>
+                    <p id="reactivate-desc" style="font-size:14px; color:var(--muted); line-height:1.6; margin-bottom:40px;">
+                        This account is in a grace period and will be permanently deleted on <span id="removal-date" style="color:var(--text); font-weight:700;">—</span>.
                     </p>
                     
-                    <button class="btn-primary" onclick="executeReactivation()" id="confirm-reactivate-btn">
+                    <button class="btn-primary" style="background: #FF9F0A;" onclick="executeReactivation()" id="confirm-reactivate-btn">
                         <span>Reactivate Account</span>
                         <div class="spinner" id="reactivate-spinner"></div>
                     </button>
                     
-                    <button style="margin-top:16px; width:100%; height:54px; background:none; border:2px solid var(--border); border-radius:18px; color:var(--text); font-weight:800; text-transform:uppercase; letter-spacing:0.05em; font-size:12px; cursor:pointer;" onclick="switchTo('login')">
+                    <button class="btn-secondary" style="margin-top:12px;" onclick="switchTo('login')">
                         Cancel and Log Out
                     </button>
                 </div>

@@ -58,7 +58,7 @@
             --card: #1C1C1E;
             --card-rgb: 28, 28, 30;
             --surface: #1C1C1E;
-            --border: rgba(255,255,255,0.12);
+            --border: rgba(255,255,255,0.2);
             --text: #FFFFFF;
             --text-muted: #8E8E93;
             --muted: #8E8E93;
@@ -168,13 +168,6 @@
             display: flex; align-items: center; gap: 12px;
             padding: 0 12px; margin-bottom: 32px;
         }
-        .sidebar-logo .mark {
-            width: 40px; height: 40px;
-            background: #000; border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-weight: 900; font-size: 20px;
-            flex-shrink: 0; position: relative; overflow: hidden;
-        }
         .sidebar-logo span { font-size: 22px; font-weight: 900; letter-spacing: -0.8px; }
 
         .nav-group-label {
@@ -185,7 +178,7 @@
 
         .nav-item {
             display: flex; align-items: center; gap: 12px;
-            padding: 12px 16px; border-radius: 12px;
+            padding: 12px 16px; border-radius: 10px;
             font-size: 14px; font-weight: 600; color: var(--muted);
             cursor: pointer; transition: all 0.2s cubic-bezier(0.2,0,0,1); user-select: none;
             border: 1px solid transparent;
@@ -203,7 +196,7 @@
         .credits-pill {
             margin: auto 0 0;
             background: var(--bg);
-            border-radius: 20px;
+            border-radius: 14px;
             padding: 20px;
             border: 1px solid var(--border);
         }
@@ -223,7 +216,7 @@
 
         .logout-btn {
             display: flex; align-items: center; gap: 10px;
-            padding: 12px 16px; border-radius: 12px; border: none; background: none;
+            padding: 12px 16px; border-radius: 10px; border: none; background: none;
             font-family: inherit; font-size: 14px; font-weight: 600;
             color: var(--red); cursor: pointer; width: 100%; margin-top: 12px;
             transition: all 0.2s;
@@ -249,7 +242,7 @@
         .topbar-right { display: flex; align-items: center; gap: 12px; }
 
         .icon-btn {
-            width: 48px; height: 48px; border-radius: 14px;
+            width: 48px; height: 48px; border-radius: 12px;
             border: 1px solid var(--border);
             background: var(--card);
             display: flex; align-items: center; justify-content: center;
@@ -275,48 +268,93 @@
         .pipeline-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; flex: 1; padding-bottom: 24px; min-height: 0; overflow: visible; }
 
         @media (max-width: 768px) {
-            .pipeline-cols { grid-template-columns: 1fr; overflow-y: visible; padding-bottom: 80px; gap: 24px; }
+            .pipeline-cols { grid-template-columns: 1fr; overflow-y: visible; padding-bottom: 80px; gap: 48px; }
             .col-scroll { overflow-y: visible !important; height: auto !important; flex: none !important; padding-bottom: 0 !important; }
+            .col-container { 
+                background: var(--card); 
+                border-radius: 20px; 
+                padding: 24px; 
+                border: 1px solid var(--border);
+                box-shadow: var(--card-shadow);
+            }
+            .col-header { 
+                position: relative !important; 
+                top: 0 !important; 
+                background: transparent !important; 
+                backdrop-filter: none !important;
+                padding-top: 0 !important;
+                margin-bottom: 24px !important;
+                border-bottom: 1px solid var(--border);
+                padding-bottom: 16px !important;
+            }
         }
 
         .col-header {
             display: flex; align-items: center; justify-content: space-between;
             margin-bottom: 16px; padding: 12px 0; flex-shrink: 0;
-            position: sticky; top: -1px; z-index: 10; background: var(--bg);
+            position: sticky; top: -1px; z-index: 10;
+            background: transparent;
         }
         .col-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
         .col-badge {
             font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 99px;
             letter-spacing: -0.2px;
         }
-        .col-badge.new { background: var(--blue-bg); color: var(--blue); }
-        .col-badge.working { background: var(--orange-bg); color: var(--orange); }
+        .col-badge.new { border: 1.5px solid var(--blue); color: var(--blue); background: transparent; }
+        .col-badge.working { border: 1.5px solid var(--orange); color: var(--orange); background: transparent; }
 
         .col-scroll {
             overflow-y: auto; flex: 1; padding-bottom: 120px;
             transition: background 0.3s cubic-bezier(0.2,0,0,1); min-height: 200px;
             -webkit-overflow-scrolling: touch;
         }
-        .col-scroll.dragging-over { background: var(--blue-bg); border-radius: 24px; }
+        .col-scroll.dragging-over { background: var(--blue-bg); border-radius: 16px; }
 
         /* [UI_COMPONENT: LEAD_CARD] 
            Interactive unit representing a unique customer lead.
         */
         .lead-card {
-            background: var(--card); border-radius: 20px;
+            background: var(--card); border-radius: 14px;
             margin-bottom: 20px; overflow: hidden;
             user-select: none; -webkit-user-select: none;
             touch-action: pan-y; position: relative; cursor: grab;
             border: 1px solid var(--border);
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-            transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+            transition: box-shadow 0.2s, border-color 0.2s, opacity 0.2s;
         }
         .lead-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.12); }
         body.dark .lead-card:hover { border-color: rgba(255,255,255,0.2); }
 
         /* [SORTABLE_STATE_DECORATION] */
-        .sortable-ghost { background: var(--blue-bg) !important; border: 1.5px dashed var(--blue) !important; opacity: 0.5 !important; }
-        .sortable-drag { scale: 1.02 !important; rotate: 1deg !important; pointer-events: none !important; box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important; }
+        .sortable-ghost { 
+            background: var(--blue-bg) !important; 
+            border: 2px dashed var(--blue) !important; 
+            opacity: 0.6 !important;
+            border-radius: 14px !important;
+            animation: pulse-outline 1.5s infinite;
+        }
+        @keyframes pulse-outline {
+            0% { border-color: var(--blue); box-shadow: 0 0 0 0 rgba(0,122,255,0.2); }
+            50% { border-color: transparent; box-shadow: 0 0 0 8px rgba(0,122,255,0); }
+            100% { border-color: var(--blue); box-shadow: 0 0 0 0 rgba(0,122,255,0); }
+        }
+        .sortable-drag { 
+            opacity: 0 !important;
+        }
+        .sortable-chosen {
+            opacity: 1 !important;
+            z-index: 1000;
+        }
+        .sortable-fallback { 
+            opacity: 1 !important; 
+            box-shadow: 0 30px 60px rgba(0,0,0,0.25) !important; 
+            cursor: grabbing !important;
+            pointer-events: none !important;
+            z-index: 9999 !important;
+            transition: none !important;
+            will-change: top, left;
+            transform: scale(1.04) !important; /* Slight scale of the card in hand */
+        }
 
         .card-video { height: 130px; background: #000; position: relative; overflow: hidden; cursor: grab; }
         .card-video video { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; pointer-events: none; }
@@ -440,7 +478,7 @@
         }
 
         .settings-card {
-            background: var(--card); border-radius: 20px; padding: 24px;
+            background: var(--card); border-radius: 14px; padding: 24px;
             border: 1px solid var(--border);
             display: flex; flex-direction: column;
         }
@@ -458,11 +496,11 @@
         .settings-info h3 { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 8px; letter-spacing: -0.5px; }
         .settings-info p { font-size: 14px; color: var(--muted); font-weight: 500; line-height: 1.6; max-width: 280px; }
         
-        .settings-action .settings-card { margin-bottom: 0; border-radius: 24px; padding: 32px; border: 1px solid var(--border); }
+        .settings-action .settings-card { margin-bottom: 0; border-radius: 16px; padding: 32px; border: 1px solid var(--border); }
 
         .settings-label { display: block; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; margin-top: 16px; }
         .settings-input { 
-            width: 100%; padding: 14px 18px; border-radius: 14px; border: 1.5px solid var(--border);
+            width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border);
             background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600;
             transition: all 0.2s cubic-bezier(0.2,0,0,1);
         }
@@ -475,7 +513,7 @@
         .info-row-value.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: var(--bg); padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; border: 1px solid var(--border); }
 
         .btn-primary-sm {
-            padding: 12px 20px; background: #000; color: #fff; border: none; border-radius: 12px;
+            padding: 12px 20px; background: #000; color: #fff; border: none; border-radius: 10px;
             font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: -0.2px;
             cursor: pointer; transition: all 0.2s cubic-bezier(0.2,0,0,1);
             width: fit-content; display: inline-flex; align-items: center; justify-content: center;
@@ -485,7 +523,7 @@
         .btn-primary-sm:active { transform: translateY(0); }
 
         .code-block {
-            background: #000; color: #7EE787; border-radius: 16px;
+            background: #000; color: #7EE787; border-radius: 12px;
             padding: 24px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px;
             line-height: 1.6; overflow-x: hidden; white-space: pre-wrap;
             word-break: break-all;
@@ -507,12 +545,13 @@
 
         .danger-btn {
             display: inline-flex; align-items: center; gap: 8px;
-            padding: 12px 20px; background: var(--red-bg); color: var(--red);
-            border: 1px solid rgba(255,59,48,0.1); border-radius: 10px;
-            font-weight: 700; font-size: 11px; cursor: pointer;
-            text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.2s;
+            padding: 12px 20px; background: var(--red); color: #fff;
+            border: none; border-radius: 10px;
+            font-weight: 700; font-size: 13px; cursor: pointer;
+            text-transform: none; letter-spacing: -0.2px; transition: all 0.2s;
+            height: 48px;
         }
-        .danger-btn:hover { background: var(--red); color: #fff; }
+        .danger-btn:hover { background: #E02D26; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,59,48,0.25); }
 
         /* [UI_COMPONENT: NOTIFICATION_SYSTEM] */
         #toast-container {
@@ -521,7 +560,7 @@
             pointer-events: none; width: 90%; max-width: 360px;
         }
         .toast {
-            display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-radius: 20px;
+            display: flex; align-items: center; gap: 12px; padding: 16px 24px; border-radius: 16px;
             background: #1C1C1E; color: #fff; font-size: 13px; font-weight: 700;
             box-shadow: 0 16px 48px rgba(0,0,0,0.25); pointer-events: auto;
             animation: toastIn 0.4s cubic-bezier(0.2,0,0,1) forwards;
@@ -538,7 +577,7 @@
         }
         .modal-backdrop.open { display: flex; }
         .modal {
-            background: var(--card); border-radius: 32px; padding: 40px;
+            background: var(--card); border-radius: 16px; padding: 40px;
             width: 100%; max-width: 440px; border: 1px solid var(--border);
             box-shadow: 0 40px 100px rgba(0,0,0,0.3);
             animation: popIn 0.4s cubic-bezier(0.2,0,0,1);
@@ -550,7 +589,7 @@
         .modal-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; font-weight: 600; }
         
         .modal-input {
-            width: 100%; padding: 16px 20px; border-radius: 16px; border: 1.5px solid var(--border);
+            width: 100%; padding: 16px 20px; border-radius: 12px; border: 1.5px solid var(--border);
             background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 15px; font-weight: 700; transition: all 0.2s; margin-bottom: 16px;
         }
@@ -568,7 +607,7 @@
         .toggle-password svg { width: 20px; height: 20px; stroke-width: 2.2; }
 
         .template-btn {
-            width: 100%; padding: 16px; border-radius: 16px; border: 1px solid var(--border);
+            width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border);
             background: var(--card); color: var(--text); text-align: left;
             font-size: 14px; font-weight: 700; margin-bottom: 10px;
             cursor: pointer; transition: all 0.2s;
@@ -607,11 +646,11 @@
         -->
         <div class="m-nav-item active" id="m-nav-pipeline" onclick="switchView('pipeline')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/></svg>
-            Workflow
+            Pipeline
         </div>
         <div class="m-nav-item" id="m-nav-archive" onclick="switchView('archive')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Completed
+            Archive
         </div>
         <div class="m-nav-item" id="m-nav-settings" onclick="switchView('settings')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -627,10 +666,10 @@
             <span>Tradsiee</span>
         </div>
 
-        <div class="nav-group-label">Workspace</div>
+        <div class="nav-group-label">Lead Management</div>
         <div class="nav-item active" id="nav-pipeline" onclick="switchView('pipeline')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"/></svg>
-            Workflow
+            Pipeline
         </div>
         <div class="nav-item" id="nav-archive" onclick="switchView('archive')">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -673,7 +712,7 @@
                  Contextual titling and sync status visualization.
             -->
             <div class="topbar-left">
-                <h1 id="view-title">Workflow</h1>
+                <h1 id="view-title">Pipeline</h1>
                 <p id="view-sub"></p>
             </div>
             <div class="topbar-right">
@@ -700,14 +739,14 @@
             </div>
 
             <div class="pipeline-cols">
-                <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+                <div class="col-container" style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
                     <div class="col-header">
                         <span class="col-label">New Jobs</span>
                         <span class="col-badge new" id="count-new">0</span>
                     </div>
                     <div class="col-scroll" id="col-new"></div>
                 </div>
-                <div style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+                <div class="col-container" style="display:flex;flex-direction:column;overflow:hidden;min-width:0;">
                     <div class="col-header">
                         <span class="col-label">Working On</span>
                         <span class="col-badge working" id="count-working">0</span>
@@ -785,9 +824,9 @@
                             <div class="info-row-label">Password</div>
                             <div class="info-row-value">••••••••••••</div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px;">
-                            <button class="btn-primary-sm" style="height: 48px; background: var(--bg); color: var(--text);" onclick="openModal('email-modal')">Change Email</button>
-                            <button class="btn-primary-sm" style="height: 48px;" onclick="openModal('password-modal')">Update Password</button>
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 24px;">
+                            <button class="btn-primary-sm" style="width: 100%; height: 48px; background: var(--bg); color: var(--text); border: 1.5px solid var(--border);" onclick="openModal('email-modal')">Update Account Email</button>
+                            <button class="btn-primary-sm" style="width: 100%; height: 48px;" onclick="openModal('password-modal')">Change Password</button>
                         </div>
                     </div>
                 </div>
@@ -845,14 +884,14 @@
 
             <div class="settings-row" style="border-bottom: none;">
                 <div class="settings-info">
-                    <h3>Danger Zone</h3>
-                    <p>Permanently delete your profile and all associated lead data. This cannot be undone.</p>
+                    <h3>Account Security</h3>
+                    <p>Permanently remove your business profile and all associated data. This action is irreversible.</p>
                 </div>
                 <div class="settings-action">
                     <div class="settings-card" style="border-color: var(--red-bg);">
                         <button class="danger-btn" style="width: 100%; justify-content: center; height: 48px;" onclick="openDeleteModal()">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            Delete Profile
+                            Terminate Account
                         </button>
                     </div>
                 </div>
@@ -957,41 +996,40 @@
     <div class="modal" style="max-width: 480px; padding: 0; overflow: hidden;" onclick="event.stopPropagation()">
         <!-- Header with Danger Icon -->
         <div style="background: var(--red-bg); padding: 32px; text-align: center; border-bottom: 1px solid rgba(255,59,48,0.1);">
-            <div style="width: 64px; height: 64px; background: var(--red); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: #fff; margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(255,59,48,0.3);">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="32" height="32" stroke-width="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <div style="width: 56px; height: 56px; background: var(--red); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; margin: 0 auto 16px;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="28" height="28" stroke-width="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </div>
-            <div class="modal-title" style="color: var(--red); margin-bottom: 4px;">Delete Profile</div>
+            <div class="modal-title" style="color: var(--red); margin-bottom: 4px;">Terminate Account</div>
             <p style="font-size: 14px; color: var(--red); font-weight: 600; opacity: 0.8;">This action is permanent and irreversible.</p>
         </div>
 
         <div style="padding: 32px;">
             <!-- Single Checkbox -->
-            <div style="background: var(--bg); padding: 16px; border-radius: 16px; margin-bottom: 24px; border: 1px solid var(--border);">
+            <div style="background: var(--bg); padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border);">
                 <label style="display: flex; align-items: flex-start; gap: 12px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; line-height: 1.5;">
                     <input type="checkbox" id="delete-check-single" style="margin-top: 3px; width: 18px; height: 18px; accent-color: var(--red);" onchange="validateDeleteForm()">
-                    <span>I understand that deleting my profile will permanently erase all lead data and release my business slug.</span>
+                    <span>I understand that terminating my profile will permanently erase all lead data and release my business identifier.</span>
                 </label>
             </div>
 
             <!-- Phrase Input -->
-            <label class="settings-label" style="margin-top: 0;">Confirm Workspace Slug</label>
+            <label class="settings-label" style="margin-top: 0;">Confirm Business Identifier</label>
             <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px; font-weight: 500;">Type <strong id="delete-confirm-phrase" style="color: var(--text); font-family: monospace; background: var(--bg); padding: 2px 6px; border-radius: 4px;"></strong> to confirm.</p>
-            <input class="modal-input" id="delete-input-phrase" type="text" placeholder="Enter slug" oninput="validateDeleteForm()" style="margin-bottom: 24px;">
+            <input class="modal-input" id="delete-input-phrase" type="text" placeholder="Enter identifier" oninput="validateDeleteForm()" style="margin-bottom: 24px;">
 
             <!-- SMS Code Verification -->
-            <label class="settings-label">SMS Verification Code</label>
+            <label class="settings-label">Verification Code</label>
             <div style="display:grid; grid-template-columns: 1fr 160px; gap:12px; margin-top: 8px;">
-                <button class="btn-primary-sm" style="width:100%; height:54px; border-radius: 16px; font-weight: 800;" onclick="sendDeleteCode()" id="send-del-code-btn">Send SMS</button>
-                <input class="modal-input" style="text-align:center; margin-bottom:0; height:54px; letter-spacing: 0.2em; font-size: 18px; border-radius: 16px;" id="delete-input-code" type="text" maxlength="10" placeholder="00000000" oninput="validateDeleteForm()">
+                <button class="btn-primary-sm" style="width:100%; height:54px; border-radius: 12px; font-weight: 800;" onclick="sendDeleteCode()" id="send-del-code-btn">Send Code</button>
+                <input class="modal-input" style="text-align:center; margin-bottom:0; height:54px; letter-spacing: 0.2em; font-size: 18px; border-radius: 12px;" id="delete-input-code" type="text" maxlength="10" placeholder="00000000" oninput="validateDeleteForm()">
             </div>
             
             <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 12px;">
-                <button class="danger-btn" style="width:100%; justify-content:center; height:56px; border-radius: 16px; font-size: 14px; font-weight: 800; box-shadow: 0 4px 12px var(--red-bg);" id="final-delete-btn" onclick="executeDelete()" disabled>
-                    Permanently Delete Profile
+                <button class="danger-btn" style="width:100%; justify-content:center; height:56px; border-radius: 12px; font-size: 14px; font-weight: 800;" id="final-delete-btn" onclick="executeDelete()" disabled>
+                    Terminate Account and Erase Data
                 </button>
-                <button class="modal-close" style="margin-top: 0;" onclick="closeDeleteModal()">Keep My Account</button>
+                <button class="modal-close" style="margin-top: 0;" onclick="closeDeleteModal()">Return to Workspace</button>
             </div>
-        </div>
     </div>
 </div>
 <div class="modal-backdrop" id="sms-modal" onclick="closeModal('sms-modal')">
@@ -1026,44 +1064,46 @@
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
             <!-- Pro Plan -->
-            <div style="border: 1.5px solid var(--border); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.1em;">Sole Trader</div>
-                <div style="font-size: 20px; font-weight: 900;">Pro</div>
+            <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.1em;">Standard</div>
+                <div style="font-size: 20px; font-weight: 900;">Professional</div>
                 <div style="font-size: 24px; font-weight: 900; color: var(--text);">$24<span style="font-size: 13px; color: var(--muted); font-weight: 600;">/mo</span></div>
                 <ul style="list-style: none; padding: 0; margin: 8px 0; font-size: 13px; font-weight: 500; color: var(--text); opacity: 0.8; line-height: 1.8;">
                     <li>✓ 30 leads per month</li>
-                    <li>✓ Standard SMS alerts</li>
-                    <li>✓ Keep archived leads forever</li>
-                    <li>✓ Basic analytics</li>
+                    <li>✓ Professional SMS alerts</li>
+                    <li>✓ Extended lead history</li>
+                    <li>✓ Essential analytics</li>
                 </ul>
-                <button class="btn-primary-sm" style="width: 100%; margin-top: auto;" onclick="showToast('Connecting to payment gateway...')">Select Pro</button>
+                <button class="btn-primary-sm" style="width: 100%; margin-top: auto;" onclick="showToast('Connecting to payment gateway...')">Select Professional</button>
             </div>
 
             <!-- Business Plan -->
-            <div style="border: 2px solid var(--blue); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 12px; position: relative; background: var(--blue-bg);">
-                <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--blue); color: #fff; font-size: 9px; font-weight: 900; padding: 4px 12px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.1em;">Most Popular</div>
-                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--blue); letter-spacing: 0.1em;">Growing Team</div>
+            <div style="border: 2px solid var(--blue); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; position: relative; background: var(--blue-bg);">
+                <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--blue); color: #fff; font-size: 9px; font-weight: 900; padding: 4px 12px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.1em;">Recommended</div>
+                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--blue); letter-spacing: 0.1em;">Growth</div>
                 <div style="font-size: 20px; font-weight: 900;">Business</div>
                 <div style="font-size: 24px; font-weight: 900; color: var(--text);">$79<span style="font-size: 13px; color: var(--muted); font-weight: 600;">/mo</span></div>
                 <ul style="list-style: none; padding: 0; margin: 8px 0; font-size: 13px; font-weight: 500; color: var(--text); opacity: 0.8; line-height: 1.8;">
                     <li>✓ 100 leads per month</li>
-                    <li>✓ Priority SMS alerts</li>
-                    <li>✓ Customer CRM sync</li>
+                    <li>✓ Priority infrastructure</li>
+                    <li>✓ Advanced CRM integration</li>
+                    <li>✓ Priority support</li>
                 </ul>
                 <button class="btn-primary-sm" style="width: 100%; margin-top: auto; background: var(--blue);" onclick="showToast('Connecting to payment gateway...')">Select Business</button>
             </div>
 
             <!-- Unlimited Plan -->
-            <div style="border: 1.5px solid var(--border); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.1em;">Enterprise</div>
-                <div style="font-size: 20px; font-weight: 900;">Unlimited</div>
+            <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.1em;">Corporate</div>
+                <div style="font-size: 20px; font-weight: 900;">Enterprise</div>
                 <div style="font-size: 24px; font-weight: 900; color: var(--text);">$119<span style="font-size: 13px; color: var(--muted); font-weight: 600;">/mo</span></div>
                 <ul style="list-style: none; padding: 0; margin: 8px 0; font-size: 13px; font-weight: 500; color: var(--text); opacity: 0.8; line-height: 1.8;">
-                    <li>✓ Infinite monthly leads</li>
-                    <li>✓ Dedicated support</li>
-                    <li>✓ Advanced custom branding</li>
+                    <li>✓ Unlimited monthly leads</li>
+                    <li>✓ Dedicated infrastructure</li>
+                    <li>✓ custom business branding</li>
+                    <li>✓ Account manager</li>
                 </ul>
-                <button class="btn-primary-sm" style="width: 100%; margin-top: auto;" onclick="showToast('Connecting to payment gateway...')">Select Unlimited</button>
+                <button class="btn-primary-sm" style="width: 100%; margin-top: auto;" onclick="showToast('Connecting to payment gateway...')">Select Enterprise</button>
             </div>
         </div>
         
@@ -1087,12 +1127,14 @@ const state = {
     email: '',
     phone: '',
     currentView: 'pipeline',
+    sortBy: 'newest',
     theme: localStorage.getItem('tradsiee_theme') || 'light',
     isVerified: true,
     limitsEnabled: true,
     bulkMode: false,
     selectedLeads: [],
-    searchQuery: ''
+    searchQuery: '',
+    isDragging: false
 };
 
     // [AUTH_REDIRECT_LOGIC] Ensures session presence before initialization.
@@ -1227,8 +1269,16 @@ const state = {
             
             // Check if leads actually changed before a full render
             const newLeads = data.leads || [];
-            const leadsChanged = JSON.stringify(newLeads) !== JSON.stringify(state.leads.filter(l => !String(l.id).startsWith('mock-')));
+            const leadsChanged = JSON.stringify(newLeads) !== JSON.stringify(state.leads);
             
+            // Prevent UI flashing/re-rendering while user is dragging
+            if (state.isDragging) {
+                setSync(false);
+                clearTimeout(autoRefreshTimer);
+                autoRefreshTimer = setTimeout(() => refresh(true), 15000);
+                return;
+            }
+
             state.leads = newLeads;
             state.credits = data.credits || 0;
             state.bizName = data.business_name || '';
@@ -1236,23 +1286,6 @@ const state = {
             state.email = data.email || '';
             state.phone = data.phone_number || '';
             state.limitsEnabled = data.limits_enabled !== false;
-
-            // [DEV_ONLY] Inject mock leads if empty
-            if (state.leads.length < 3) {
-                const names = ['John Smith', 'Sarah Connor', 'Mike Ross', 'Harvey Specter'];
-                for (let i = 0; i < 8; i++) {
-                    state.leads.push({
-                        id: `mock-${i}-${Date.now()}`,
-                        first_name: names[i % names.length].split(' ')[0],
-                        last_name: names[i % names.length].split(' ')[1],
-                        customer_phone: '0412 345 678',
-                        customer_description: 'I have a leaking tap in the kitchen that needs fixing.',
-                        video_url: 'https://res.cloudinary.com/demo/video/upload/dog.mp4',
-                        status: i < 4 ? 'pending' : 'contacted',
-                        created_at: new Date(Date.now() - (i * 1000 * 60 * 60 * 3)).toISOString()
-                    });
-                }
-            }
 
             if (leadsChanged || !silent) {
                 renderData();
@@ -1281,6 +1314,7 @@ const state = {
         const planBadge = document.getElementById('plan-badge-text');
         const barContainer = document.getElementById('credits-bar-container');
         const creditsBar = document.getElementById('credits-bar');
+        const creditsPill = document.getElementById('credits-pill-container');
 
         // Settings View Elements
         const sPlanName = document.getElementById('settings-plan-name');
@@ -1291,29 +1325,31 @@ const state = {
         const uBtn = document.getElementById('upgrade-btn');
 
         if (limitsEnabled) {
+            if (creditsPill) creditsPill.style.display = 'block';
             if (creditsNum) creditsNum.innerHTML = state.credits || 0;
-            if (planBadge) planBadge.textContent = "Standard Plan";
+            if (planBadge) planBadge.textContent = "Professional Plan";
             if (barContainer) barContainer.style.display = 'block';
             
             // Calculate bar width (assuming 10 is the base for now, can be dynamic later)
             const percentage = Math.min(100, Math.max(0, (state.credits / 10) * 100));
             if (creditsBar) creditsBar.style.width = `${percentage}%`;
 
-            if (sPlanName) sPlanName.textContent = "Standard Plan";
+            if (sPlanName) sPlanName.textContent = "Professional Plan";
             if (sCreditsRow) sCreditsRow.style.display = 'flex';
             if (sCreditsNum) sCreditsNum.textContent = state.credits || 0;
-            if (uTitle) uTitle.textContent = "Upgrade to Unlimited";
-            if (uDesc) uDesc.textContent = "Remove lead limits and get priority SMS delivery for your business.";
+            if (uTitle) uTitle.textContent = "Upgrade to Enterprise";
+            if (uDesc) uDesc.textContent = "Remove lead quotas and access priority infrastructure for your business.";
             if (uBtn) uBtn.style.display = 'block';
         } else {
+            if (creditsPill) creditsPill.style.display = 'none';
             if (creditsNum) creditsNum.innerHTML = `<span style="font-size: 24px;">&infin;</span>`;
-            if (planBadge) planBadge.textContent = "Unlimited Access";
+            if (planBadge) planBadge.textContent = "Enterprise Access";
             if (barContainer) barContainer.style.display = 'none';
 
-            if (sPlanName) sPlanName.textContent = "Unlimited Access";
+            if (sPlanName) sPlanName.textContent = "Enterprise Access";
             if (sCreditsRow) sCreditsRow.style.display = 'none';
-            if (uTitle) uTitle.textContent = "Plan Fully Optimized";
-            if (uDesc) uDesc.textContent = "You are currently on our top-tier plan with no lead limits.";
+            if (uTitle) uTitle.textContent = "Enterprise Optimized";
+            if (uDesc) uDesc.textContent = "You are currently on our highest tier with unlimited lead capacity.";
             if (uBtn) uBtn.style.display = 'none';
         }
 
@@ -1411,8 +1447,14 @@ const state = {
         const isProcessing = l.video_url === 'https://processing.waiting.video';
 
         div.innerHTML = `
-            <div class="swipe-reveal right">Accept Job</div>
-            <div class="swipe-reveal left">Archive</div>
+            <div class="swipe-reveal right" style="gap:10px;">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+                <span>Accept Job</span>
+            </div>
+            <div class="swipe-reveal left" style="gap:10px;">
+                <span>Archive</span>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20" stroke-width="3"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </div>
             <div class="card-checkbox no-drag ${isSelected ? 'checked' : ''}" onclick="event.stopPropagation(); toggleLeadSelection('${l.id}')" style="top: 10px; right: 10px;">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
@@ -1474,14 +1516,28 @@ const state = {
 
     function initSortable() {
         const cfg = { 
-            group: 'pipeline', animation: 200, ghostClass: 'sortable-ghost',
-            forceFallback: true,
+            group: 'pipeline', animation: 400, 
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            chosenClass: 'sortable-chosen',
+            forceFallback: false, 
             fallbackClass: "sortable-fallback",
-            disabled: state.bulkMode, // Prevent moving leads when in selection mode
-            delay: 200, delayOnTouchOnly: true,
+            fallbackOnBody: true,
+            swapThreshold: 0.4,
+            invertedSwapThreshold: 0.4,
+            disabled: state.bulkMode, 
+            delay: 50, delayOnTouchOnly: true,
             filter: '.no-drag',
             preventOnFilter: false,
-            onEnd: (e) => { if (e.from !== e.to) updateStatus(e.item.getAttribute('data-id'), e.to.id === 'col-new' ? 'pending' : 'contacted'); }
+            onStart: () => { 
+                state.isDragging = true; 
+                document.body.classList.add('is-dragging');
+            },
+            onEnd: (e) => { 
+                state.isDragging = false;
+                document.body.classList.remove('is-dragging');
+                if (e.from !== e.to) updateStatus(e.item.getAttribute('data-id'), e.to.id === 'col-new' ? 'pending' : 'contacted'); 
+            }
         };
         if (sortableNew) sortableNew.destroy();
         if (sortableWorking) sortableWorking.destroy();
@@ -1499,74 +1555,106 @@ const state = {
             let currentX = 0, currentY = 0;
             let isDragging = false;
             let isVerticalScroll = false;
-            const threshold = 110; 
+            let hasHorizontalLock = false;
+            const threshold = 100; 
 
             card.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
                 inner.style.transition = 'none';
+                revealRight.style.transition = 'none';
+                revealLeft.style.transition = 'none';
                 isDragging = true;
                 isVerticalScroll = false;
+                hasHorizontalLock = false;
+                state.isDragging = true; 
             }, { passive: true });
 
             card.addEventListener('touchmove', (e) => {
                 if (!isDragging || isVerticalScroll) return;
                 
-                currentX = e.touches[0].clientX - startX;
-                currentY = e.touches[0].clientY - startY;
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                currentX = touchX - startX;
+                currentY = touchY - startY;
 
-                // Detect if user is trying to scroll vertically
-                if (Math.abs(currentY) > Math.abs(currentX) * 1.5 && Math.abs(currentY) > 5) {
-                    isVerticalScroll = true;
-                    isDragging = false;
-                    inner.style.transform = 'translateX(0)';
-                    return;
-                }
-                
-                // If it's a horizontal swipe, prevent page scroll to make it feel "tight"
-                if (Math.abs(currentX) > 10) {
-                    inner.style.transform = `translateX(${currentX}px)`;
-                    
-                    if (currentX > 20) {
-                        revealRight.style.opacity = Math.min(1, currentX / 60);
-                        revealLeft.style.opacity = 0;
-                    } else if (currentX < -20) {
-                        revealLeft.style.opacity = Math.min(1, Math.abs(currentX) / 60);
-                        revealRight.style.opacity = 0;
+                // Lock horizontal if we move enough sideways
+                if (!hasHorizontalLock && Math.abs(currentX) > 10) {
+                    if (Math.abs(currentX) > Math.abs(currentY)) {
+                        hasHorizontalLock = true;
                     } else {
-                        revealRight.style.opacity = 0;
-                        revealLeft.style.opacity = 0;
+                        isVerticalScroll = true;
+                        state.isDragging = false;
+                        return;
                     }
                 }
-            }, { passive: true });
 
-            card.addEventListener('touchend', () => {
+                if (hasHorizontalLock) {
+                    if (e.cancelable) e.preventDefault(); // Stop page scroll once locked
+                    
+                    // Add elastic resistance
+                    let displayX = currentX;
+                    if (Math.abs(currentX) > threshold * 1.2) {
+                        const extra = Math.abs(currentX) - (threshold * 1.2);
+                        displayX = (threshold * 1.2 + extra * 0.3) * (currentX > 0 ? 1 : -1);
+                    }
+                    
+                    inner.style.transform = `translateX(${displayX}px)`;
+                    
+                    // Real-time animation of reveal elements
+                    if (currentX > 5) {
+                        const progress = Math.min(1, currentX / threshold);
+                        revealRight.style.opacity = progress;
+                        revealRight.style.transform = `scale(${0.9 + (0.1 * progress)})`;
+                        revealLeft.style.opacity = 0;
+                    } else if (currentX < -5) {
+                        const progress = Math.min(1, Math.abs(currentX) / threshold);
+                        revealLeft.style.opacity = progress;
+                        revealLeft.style.transform = `scale(${0.9 + (0.1 * progress)})`;
+                        revealRight.style.opacity = 0;
+                    }
+                }
+            }, { passive: false });
+
+            const endSwipe = () => {
                 if (!isDragging) return;
                 isDragging = false;
+                state.isDragging = false;
+                
                 inner.style.transition = 'transform 0.4s cubic-bezier(0.2,0,0,1)';
+                revealRight.style.transition = 'all 0.4s cubic-bezier(0.2,0,0,1)';
+                revealLeft.style.transition = 'all 0.4s cubic-bezier(0.2,0,0,1)';
                 
                 if (currentX > threshold) {
-                    inner.style.transform = 'translateX(100%)';
+                    inner.style.transform = 'translateX(110%)';
+                    revealRight.style.opacity = 1;
+                    revealRight.style.transform = 'scale(1.1)';
                     setTimeout(() => {
                         const id = card.getAttribute('data-id');
                         const l = state.leads.find(x => String(x.id) === String(id));
                         if (l && l.status === 'pending') updateStatus(id, 'contacted');
+                        else if (l && l.status === 'archived') updateStatus(id, 'pending');
                         else inner.style.transform = 'translateX(0)';
                     }, 200);
                 } else if (currentX < -threshold) {
-                    inner.style.transform = 'translateX(-100%)';
+                    inner.style.transform = 'translateX(-110%)';
+                    revealLeft.style.opacity = 1;
+                    revealLeft.style.transform = 'scale(1.1)';
                     setTimeout(() => {
                         updateStatus(card.getAttribute('data-id'), 'archived');
                     }, 200);
                 } else {
                     inner.style.transform = 'translateX(0)';
-                    setTimeout(() => {
-                        revealRight.style.opacity = 0;
-                        revealLeft.style.opacity = 0;
-                    }, 300);
+                    revealRight.style.opacity = 0;
+                    revealLeft.style.opacity = 0;
+                    revealRight.style.transform = 'scale(0.9)';
+                    revealLeft.style.transform = 'scale(0.9)';
                 }
                 currentX = 0;
-            });
+            };
+
+            card.addEventListener('touchend', endSwipe);
+            card.addEventListener('touchcancel', endSwipe);
         });
     }
 
@@ -1823,11 +1911,6 @@ const state = {
             renderData();
         }
 
-        if (String(id).startsWith('mock-')) {
-            showToast(`[Mock] Status updated to ${s}`);
-            return;
-        }
-
         try {
             await fetch(`${API}/update-lead-status/${encodeURIComponent(id)}`, {
                 method: 'PATCH',
@@ -2058,18 +2141,18 @@ const state = {
         try {
             const res = await fetch(`${API}/delete-account/${encodeURIComponent(state.slug)}?code=${encodeURIComponent(code)}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${state.token}` } });
             if (res.ok) {
-                showToast('Account deleted. Goodbye!');
+                showToast('Account successfully terminated.');
                 setTimeout(() => logout(), 1000);
             } else {
                 const data = await res.json();
-                showToast(data.detail || 'Delete failed', 'error');
+                showToast(data.detail || 'Termination failed', 'error');
                 btn.disabled = false;
-                btn.textContent = 'Permanently Delete Profile';
+                btn.textContent = 'Terminate Account and Erase Data';
             }
         } catch(e) { 
-            showToast('Delete failed', 'error'); 
+            showToast('Termination failed', 'error'); 
             btn.disabled = false;
-            btn.textContent = 'Permanently Delete Profile';
+            btn.textContent = 'Terminate Account and Erase Data';
         }
     }
 
@@ -2102,9 +2185,9 @@ const state = {
 
         // Update titles
         const titles = {
-            'pipeline': { main: 'Active Workflow', sub: 'Process your incoming business opportunities.' },
-            'archive': { main: 'Lead Archive', sub: 'Search and review your past customer engagements.' },
-            'settings': { main: 'Workspace Settings', sub: 'Manage your business profile and security.' }
+            'pipeline': { main: 'Lead Pipeline', sub: 'Manage and process incoming business opportunities.' },
+            'archive': { main: 'Archived Leads', sub: 'Review and manage your historical lead data.' },
+            'settings': { main: 'Business Settings', sub: 'Configure your profile, security, and installation.' }
         };
         
         document.getElementById('view-title').textContent = titles[v].main;

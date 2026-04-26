@@ -91,24 +91,14 @@ This file handles the multi-step user registration and phone verification flow f
             transform: translateY(-12px);
             animation: slideDown 0.6s cubic-bezier(0.2,0,0,1) 0.1s forwards;
         }
-        .logo-mark {
-            width: 44px; height: 44px;
-            background: #000;
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-weight: 900; font-size: 22px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            position: relative; overflow: hidden;
-        }
-        .logo-name { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+        .logo-name { font-size: 24px; font-weight: 900; letter-spacing: -0.6px; color: var(--text); }
 
         /* [UI_COMPONENT: REGISTRATION_CARD] */
         .card {
             background: var(--card);
-            border-radius: 32px;
+            border-radius: 16px;
             border: 1px solid var(--border);
             box-shadow:
-                0 2px 0 rgba(255,255,255,0.8) inset,
                 0 20px 60px rgba(0,0,0,0.06),
                 0 4px 16px rgba(0,0,0,0.04);
             padding: 36px 40px;
@@ -256,7 +246,6 @@ This file handles the multi-step user registration and phone verification flow f
 
     <div class="container">
         <div class="logo-wrap">
-            <div class="logo-mark">B</div>
             <span class="logo-name">Tradsiee</span>
         </div>
 

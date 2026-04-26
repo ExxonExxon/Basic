@@ -33,30 +33,28 @@ This file implements the core customer-facing interface for Tradsiee lead genera
         #tradsiee-widget-root .ts-step { display: none; animation: tsFadeUp 0.35s cubic-bezier(0.2, 0, 0, 1) forwards; }
         #tradsiee-widget-root .ts-step.active { display: block; }
         @keyframes tsFadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        #tradsiee-widget-root .ts-card { background: #ffffff; border-radius: 32px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 24px rgba(0,0,0,0.06); padding: 28px; width: 100%; }
+        #tradsiee-widget-root .ts-card { background: #ffffff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 24px; width: 100%; }
         #tradsiee-widget-root .ts-header { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
-        #tradsiee-widget-root .ts-logo { width: 36px; height: 36px; background: #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 18px; flex-shrink: 0; }
-        #tradsiee-widget-root .ts-header-text h3 { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
+        #tradsiee-widget-root .ts-header-text h3 { font-size: 16px; font-weight: 800; letter-spacing: -0.4px; line-height: 1.2; }
         #tradsiee-widget-root .ts-header-text p { font-size: 11px; font-weight: 600; color: #8E8E93; margin-top: 2px; }
         #tradsiee-widget-root .ts-progress { display: flex; gap: 6px; margin-bottom: 24px; }
         #tradsiee-widget-root .ts-progress-dot { height: 3px; flex: 1; border-radius: 99px; background: #F2F2F7; transition: background 0.3s ease; }
         #tradsiee-widget-root .ts-progress-dot.done { background: #000; }
         #tradsiee-widget-root .ts-progress-dot.active { background: #007AFF; }
-        #tradsiee-widget-root .ts-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #8E8E93; display: block; margin-bottom: 8px; }
-        #tradsiee-widget-root .ts-input { width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.08); background: #F2F2F7; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; color: #1C1C1E; outline: none; transition: all 0.2s ease; appearance: none; }
+        #tradsiee-widget-root .ts-input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); background: #F2F2F7; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; color: #1C1C1E; outline: none; transition: all 0.2s ease; appearance: none; }
         #tradsiee-widget-root .ts-input:focus { background: #fff; border-color: #007AFF; box-shadow: 0 0 0 3px rgba(0,122,255,0.12); }
         #tradsiee-widget-root .ts-phone-row { display: flex; gap: 8px; }
-        #tradsiee-widget-root .ts-upload-zone { border: 2px dashed rgba(0,0,0,0.1); border-radius: 20px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; background: #F2F2F7; position: relative; }
+        #tradsiee-widget-root .ts-upload-zone { border: 1.5px dashed rgba(0,0,0,0.1); border-radius: 12px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease; background: #F2F2F7; position: relative; }
         #tradsiee-widget-root .ts-upload-zone:hover { border-color: #007AFF; background: rgba(0,122,255,0.04); }
         #tradsiee-widget-root .ts-upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-        #tradsiee-widget-root .ts-video-preview { width: 100%; border-radius: 16px; overflow: hidden; background: #000; margin-top: 12px; display: none; position: relative; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        #tradsiee-widget-root .ts-video-preview video { width: 100%; max-height: 240px; object-fit: cover; display: block; border-radius: 16px; }
-        #tradsiee-widget-root .ts-retake-btn { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.9); color: #FF3B30; border: none; padding: 8px 12px; border-radius: 12px; font-size: 11px; font-weight: 800; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.2s ease; }
+        #tradsiee-widget-root .ts-video-preview { width: 100%; border-radius: 12px; overflow: hidden; background: #000; margin-top: 12px; display: none; position: relative; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        #tradsiee-widget-root .ts-video-preview video { width: 100%; max-height: 240px; object-fit: cover; display: block; border-radius: 12px; }
+        #tradsiee-widget-root .ts-retake-btn { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.9); color: #FF3B30; border: none; padding: 8px 12px; border-radius: 10px; font-size: 11px; font-weight: 800; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(4px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.2s ease; }
         #tradsiee-widget-root .ts-retake-btn:hover { background: #fff; transform: scale(1.05); }
         #tradsiee-widget-root .ts-upload-progress { display: none; margin-top: 12px; }
         #tradsiee-widget-root .ts-upload-progress-track { background: #F2F2F7; border-radius: 99px; height: 5px; overflow: hidden; }
         #tradsiee-widget-root .ts-upload-progress-fill { height: 100%; width: 0%; background: #007AFF; border-radius: 99px; transition: width 0.15s ease; }
-        #tradsiee-widget-root .ts-btn { width: 100%; padding: 15px; border-radius: 18px; border: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        #tradsiee-widget-root .ts-btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; transition: all 0.2s cubic-bezier(0.2, 0, 0, 1); display: flex; align-items: center; justify-content: center; gap: 8px; }
         #tradsiee-widget-root .ts-btn-primary { background: #000; color: #fff; }
         #tradsiee-widget-root .ts-spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: tsSpin 0.7s linear infinite; display: none; }
         @keyframes tsSpin { to { transform: rotate(360deg); } }
@@ -138,9 +136,9 @@ This file implements the core customer-facing interface for Tradsiee lead genera
                     <video id="ts-video-el" controls playsinline></video>
                 </div>
 
-                <textarea class="ts-input" id="ts-desc" placeholder="Describe what you need help with..."></textarea>
+                <textarea class="ts-input" id="ts-desc" placeholder="Provide any additional details..."></textarea>
                 <button class="ts-btn ts-btn-primary" id="ts-submit-btn" onclick="tsSubmit()">
-                    <span id="ts-btn-label">Send My Request</span>
+                    <span id="ts-btn-label">Submit Request</span>
                     <div class="ts-spinner" id="ts-spinner"></div>
                 </button>
                 <button class="ts-btn" style="background:#F2F2F7;color:#8E8E93;" onclick="tsGoStep(2)">Back</button>
@@ -149,21 +147,21 @@ This file implements the core customer-facing interface for Tradsiee lead genera
 
         <div class="ts-step" id="step-4">
             <div style="text-align:center;padding:12px 0;">
-                <div style="width:64px;height:64px;background:#F2F2F7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-                    <svg width="30" height="30" fill="none" stroke="#34C759" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/></svg>
+                <div style="width:56px;height:56px;background:#F2F2F7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <svg width="24" height="24" fill="none" stroke="#34C759" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/></svg>
                 </div>
-                <h3 style="font-size:20px;font-weight:800;margin-bottom:8px;">Request Sent!</h3>
-                <p style="font-size:13px;color:#8E8E93;">[[BUSINESS_NAME]] will get back to you shortly.</p>
+                <h3 style="font-size:20px;font-weight:800;margin-bottom:8px;">Request Received</h3>
+                <p style="font-size:13px;color:#8E8E93;">[[BUSINESS_NAME]] has been notified and will be in touch shortly.</p>
             </div>
         </div>
 
         <div class="ts-step" id="step-error">
             <div style="text-align:center;padding:12px 0;">
-                <div style="width:64px;height:64px;background:#FFF5F5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-                    <svg width="30" height="30" fill="none" stroke="#FF3B30" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/></svg>
+                <div style="width:56px;height:56px;background:#FFF5F5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+                    <svg width="24" height="24" fill="none" stroke="#FF3B30" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/></svg>
                 </div>
-                <h3 style="font-size:18px;font-weight:800;margin-bottom:8px;">Oh no!</h3>
-                <p style="font-size:13px;color:#8E8E93;line-height:1.5;">Looks like Tradsiee is having some issues. Please <a id="ts-error-link" href="tel:[[BUSINESS_PHONE]]" style="color:#007AFF;text-decoration:none;font-weight:700;">call us instead</a> at <strong id="ts-error-phone">[[BUSINESS_PHONE]]</strong></p>
+                <h3 style="font-size:18px;font-weight:800;margin-bottom:8px;">Unable to Connect</h3>
+                <p style="font-size:13px;color:#8E8E93;line-height:1.5;">We encountered an issue processing your request. Please contact the business directly at <a id="ts-error-link" href="tel:[[BUSINESS_PHONE]]" style="color:#007AFF;text-decoration:none;font-weight:700;">[[BUSINESS_PHONE]]</a></p>
             </div>
         </div>
     </div>
