@@ -85,12 +85,16 @@ app.mount("/static", StaticFiles(directory="web/static"), name="static")
 
 # --- Middleware ---
 
+# [CORS_POLICY]
+# Optimized for a widget-based platform. 
+# allow_credentials is set to False because we use Bearer Tokens (JWT), 
+# which is significantly more secure than cookie-based auth.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=".*",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"], # Required for the widget to work on any customer site
+    allow_credentials=False, 
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "X-Requested-With"],
     expose_headers=["*"]
 )
 
