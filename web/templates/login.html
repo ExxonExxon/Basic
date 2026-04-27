@@ -52,13 +52,13 @@ orchestrating login, password recovery, and session establishment.
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 24px;
             -webkit-font-smoothing: antialiased;
-            overflow: hidden;
             position: relative;
         }
 
@@ -76,26 +76,35 @@ orchestrating login, password recovery, and session establishment.
             max-width: 400px;
             position: relative;
             z-index: 10;
+            margin: auto;
         }
 
         /* [UI_COMPONENT: BRAND_ANCHOR] */
         .logo-wrap {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 12px;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
             opacity: 0;
             transform: translateY(-12px);
             animation: slideDown 0.6s cubic-bezier(0.2,0,0,1) 0.1s forwards;
         }
-        .logo-name { font-size: 24px; font-weight: 900; letter-spacing: -0.6px; color: var(--text); }
+        .logo-name { font-size: 26px; font-weight: 900; letter-spacing: -0.6px; color: var(--text); }
 
         /* [UI_COMPONENT: AUTH_CARD] */
         .card {
-            background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+            background: var(--card); border-radius: 24px; border: 1px solid var(--border);
             box-shadow: 0 20px 60px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-            padding: 40px; opacity: 0; transform: translateY(16px) scale(0.98);
+            padding: 32px; opacity: 0; transform: translateY(16px) scale(0.98);
             animation: cardRise 0.7s cubic-bezier(0.2,0,0,1) 0.25s forwards;
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 16px; }
+            .card { padding: 24px; border-radius: 20px; }
+            .logo-wrap { margin-bottom: 24px; }
+            .heading h2 { font-size: 26px; }
         }
 
         @keyframes slideDown { to { opacity: 1; transform: translateY(0); } }
@@ -104,46 +113,54 @@ orchestrating login, password recovery, and session establishment.
         .view { display: none; }
         .view.active { display: block; }
 
-        .heading { margin-bottom: 32px; }
-        .heading h2 { font-size: 30px; font-weight: 900; letter-spacing: -0.8px; line-height: 1.1; color: var(--text); }
-        .heading p { font-size: 14px; font-weight: 500; color: var(--muted); margin-top: 6px; }
+        .heading { margin-bottom: 28px; }
+        .heading h2 { font-size: 28px; font-weight: 900; letter-spacing: -0.8px; line-height: 1.1; color: var(--text); }
+        .heading p { font-size: 14px; font-weight: 500; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 
         /* [UI_COMPONENT: INPUT_FIELDS] */
         .field { position: relative; margin-bottom: 20px; }
         .field label { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 8px; }
         .field input {
-            width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border);
-            background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px;
+            width: 100%; padding: 16px; border-radius: 14px; border: 1.5px solid var(--border);
+            background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px;
             font-weight: 600; color: var(--text); outline: none; transition: all 0.2s cubic-bezier(0.2,0,0,1);
+            -webkit-appearance: none;
         }
         .field input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 4px rgba(0,122,255,0.1); }
-        .field input.error { border-color: var(--red); box-shadow: 0 0 0 4px rgba(255,59,48,0.1); }
+        .field input.error { border-color: var(--red); background: #FFF9F9; }
+        
+        .field-error {
+            color: var(--red); font-size: 12px; font-weight: 600; margin-top: 6px; display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
         /* [UI_COMPONENT: PASSWORD_TOGGLE] */
         .pass-wrapper { position: relative; }
         .toggle-password {
-            position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+            position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
             cursor: pointer; color: var(--muted); display: flex; align-items: center;
-            transition: color 0.2s; z-index: 10;
+            transition: color 0.2s; z-index: 10; padding: 8px;
         }
         .toggle-password:hover { color: var(--text); }
-        .toggle-password svg { width: 20px; height: 20px; stroke-width: 2.2; }
+        .toggle-password svg { width: 22px; height: 22px; stroke-width: 2.2; }
 
         /* [UI_COMPONENT: PRIMARY_BUTTONS] */
         .btn-primary {
-            width: 100%; padding: 15px; border-radius: 12px; border: none; background: #000; color: #fff;
-            font-weight: 700; text-transform: none; letter-spacing: -0.2px; cursor: pointer;
+            width: 100%; padding: 16px; border-radius: 14px; border: none; background: #000; color: #fff;
+            font-weight: 800; text-transform: none; letter-spacing: -0.2px; cursor: pointer;
             margin-top: 8px; position: relative; overflow: hidden;
             transition: all 0.2s cubic-bezier(0.2,0,0,1);
             display: flex; align-items: center; justify-content: center; gap: 10px;
-            font-size: 14px;
+            font-size: 15px;
         }
         .btn-primary:hover { background: #1C1C1E; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
-        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:active { transform: translateY(0) scale(0.98); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
 
         .btn-secondary {
-            width: 100%; height: 50px; background: none; border: 1.5px solid var(--border);
-            border-radius: 12px; color: var(--text); font-weight: 700; font-size: 13px;
+            width: 100%; padding: 14px; background: none; border: 1.5px solid var(--border);
+            border-radius: 14px; color: var(--text); font-weight: 700; font-size: 14px;
             cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
         }
         .btn-secondary:hover { background: var(--bg); border-color: var(--muted); }
@@ -195,6 +212,7 @@ orchestrating login, password recovery, and session establishment.
                 <div class="field">
                     <label>Email</label>
                     <input type="email" id="email" placeholder="you@example.com">
+                    <div class="field-error" id="email-error"></div>
                 </div>
 
                 <div class="field">
@@ -205,6 +223,7 @@ orchestrating login, password recovery, and session establishment.
                             <svg id="eye-icon-password" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c3.79 0 7.14 2.276 8.542 5.458a2.5 2.5 0 010 2.084C19.14 15.724 15.79 18 12 18c-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         </div>
                     </div>
+                    <div class="field-error" id="password-error"></div>
                     <div style="display:flex;justify-content:flex-end;margin-top:6px;">
                         <button style="font-size:12px;font-weight:700;color:var(--blue);background:none;border:none;cursor:pointer;" onclick="switchTo('forgot')">Forgot password?</button>
                     </div>
@@ -229,6 +248,7 @@ orchestrating login, password recovery, and session establishment.
                 <div class="field" style="margin-bottom: 32px;">
                     <label>Professional Email</label>
                     <input type="email" id="reset-email" placeholder="you@business.com">
+                    <div class="field-error" id="reset-email-error"></div>
                 </div>
                 <button class="btn-primary" onclick="handleReset()" id="reset-btn">
                     <span>Send Reset Link</span>
@@ -301,7 +321,26 @@ orchestrating login, password recovery, and session establishment.
             setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; setTimeout(() => t.remove(), 400); }, 4000);
         }
 
+        function showError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const errorDiv = document.getElementById(`${fieldId}-error`);
+            if (field) field.classList.add('error');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.field input').forEach(i => i.classList.remove('error'));
+            document.querySelectorAll('.field-error').forEach(e => {
+                e.textContent = '';
+                e.style.display = 'none';
+            });
+        }
+
         function switchTo(view) {
+            clearErrors();
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`${view}-view`).classList.add('active');
         }
@@ -323,18 +362,18 @@ orchestrating login, password recovery, and session establishment.
             const emailEl = document.getElementById('email');
             const passEl = document.getElementById('password');
             const btn = document.getElementById('login-btn');
+            const spinner = document.getElementById('login-spinner');
             
-            [emailEl, passEl].forEach(el => el.classList.remove('error'));
+            clearErrors();
 
             if (!emailEl.value || !passEl.value) { 
-                toast('Please enter your credentials'); 
-                if(!emailEl.value) emailEl.classList.add('error');
-                if(!passEl.value) passEl.classList.add('error');
+                if(!emailEl.value) showError('email', 'Email is required');
+                if(!passEl.value) showError('password', 'Password is required');
                 return; 
             }
 
-            document.getElementById('loader').style.display = 'flex';
             btn.disabled = true;
+            if (spinner) spinner.style.display = 'block';
 
             try {
                 const res = await fetch(`${API_BASE}/login`, {
@@ -346,30 +385,31 @@ orchestrating login, password recovery, and session establishment.
                 const data = await res.json();
                 
                 if (res.status === 403 && data.detail === "ACCOUNT_SCHEDULED_FOR_DELETION") {
-                    document.getElementById('loader').style.display = 'none';
-                    btn.disabled = false;
-                    toast('This account is scheduled for deletion and is no longer active.');
+                    switchTo('reactivate');
                     return;
                 }
 
                 if (res.ok) {
                     localStorage.setItem('tradsiee_slug', data.slug);
                     localStorage.setItem('tradsiee_token', data.access_token);
-                    setTimeout(() => { window.location.href = '[[PATH_PORTAL]]'; }, 500);
+                    toast('Welcome back!', 'success');
+                    setTimeout(() => { window.location.href = '[[PATH_PORTAL]]'; }, 800);
                 } else if (res.status === 403 && data.detail === "EMAIL_NOT_VERIFIED") {
-                    // Handle banner redirect for unverified emails
                     localStorage.setItem('tradsiee_slug', data.slug);
-                    setTimeout(() => { window.location.href = '[[PATH_PORTAL]]'; }, 500);
+                    window.location.href = '[[PATH_PORTAL]]';
                 } else {
-                    toast(data.detail || 'Access denied. Please check your credentials.');
-                    document.getElementById('loader').style.display = 'none';
-                    btn.disabled = false;
-                    passEl.classList.add('error');
+                    const msg = data.detail || 'Access denied';
+                    if (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('credentials')) {
+                        showError('password', 'Invalid email or password');
+                    } else {
+                        toast(msg);
+                    }
                 }
             } catch (err) {
                 toast('Network error. Please check your connection.');
-                document.getElementById('loader').style.display = 'none';
+            } finally {
                 btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
             }
         }
 
@@ -377,10 +417,15 @@ orchestrating login, password recovery, and session establishment.
         async function handleReset() {
             const emailEl = document.getElementById('reset-email');
             const displayEmailEl = document.getElementById('display-reset-email');
-            if (!emailEl.value) { toast('Email address required'); emailEl.classList.add('error'); return; }
-            
             const btn = document.getElementById('reset-btn');
+            const spinner = document.getElementById('reset-spinner');
+            
+            clearErrors();
+            if (!emailEl.value) { showError('reset-email', 'Email address required'); return; }
+            
             btn.disabled = true;
+            if (spinner) spinner.style.display = 'block';
+            
             try {
                 const res = await fetch(`${API_BASE}/forgot-password`, {
                     method: 'POST',
@@ -392,10 +437,13 @@ orchestrating login, password recovery, and session establishment.
                     switchTo('sent');
                 } else {
                     const data = await res.json();
-                    toast(data.detail || 'Could not send reset link');
+                    showError('reset-email', data.detail || 'Could not send reset link');
                 }
             } catch { toast('Network error'); }
-            btn.disabled = false;
+            finally {
+                btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+            }
         }
     </script>
 </body>

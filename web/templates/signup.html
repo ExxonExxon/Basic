@@ -53,13 +53,13 @@ This file handles the multi-step user registration and phone verification flow f
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 24px;
             -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
             position: relative;
         }
 
@@ -76,35 +76,45 @@ This file handles the multi-step user registration and phone verification flow f
 
         .container {
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             position: relative;
             z-index: 10;
+            margin: auto;
         }
 
         /* [UI_COMPONENT: BRAND_IDENTIFIER] */
         .logo-wrap {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 12px;
             margin-bottom: 32px;
             opacity: 0;
             transform: translateY(-12px);
             animation: slideDown 0.6s cubic-bezier(0.2,0,0,1) 0.1s forwards;
         }
-        .logo-name { font-size: 24px; font-weight: 900; letter-spacing: -0.6px; color: var(--text); }
+        .logo-name { font-size: 26px; font-weight: 900; letter-spacing: -0.6px; color: var(--text); }
 
         /* [UI_COMPONENT: REGISTRATION_CARD] */
         .card {
             background: var(--card);
-            border-radius: 16px;
+            border-radius: 24px;
             border: 1px solid var(--border);
             box-shadow:
                 0 20px 60px rgba(0,0,0,0.06),
                 0 4px 16px rgba(0,0,0,0.04);
-            padding: 36px 40px;
+            padding: 32px;
             opacity: 0;
             transform: translateY(16px) scale(0.98);
             animation: cardRise 0.7s cubic-bezier(0.2,0,0,1) 0.25s forwards;
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 16px; }
+            .card { padding: 24px; border-radius: 20px; }
+            .logo-wrap { margin-bottom: 24px; }
+            .heading h2 { font-size: 24px; }
+            .field-grid { grid-template-columns: 1fr !important; }
         }
 
         @keyframes slideDown { to { opacity: 1; transform: translateY(0); } }
@@ -167,8 +177,14 @@ This file handles the multi-step user registration and phone verification flow f
         }
         .field input.error, .field select.error {
             border-color: var(--red);
-            box-shadow: 0 0 0 4px rgba(255,59,48,0.1);
+            background: #FFF9F9;
         }
+
+        .field-error {
+            color: var(--red); font-size: 11px; font-weight: 600; margin-top: 6px; display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
         /* [UI_COMPONENT: PASSWORD_TOGGLE] */
         .pass-wrapper { position: relative; }
@@ -213,12 +229,22 @@ This file handles the multi-step user registration and phone verification flow f
 
         /* [UI_COMPONENT: PRIMARY_ACTIONS] */
         .btn-primary {
-            width: 100%; padding: 16px; border-radius: 18px; border: none; background: #000; color: #fff;
-            font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.2,0,0,1);
+            width: 100%; padding: 16px; border-radius: 14px; border: none; background: #000; color: #fff;
+            font-weight: 800; text-transform: none; letter-spacing: -0.2px; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.2,0,0,1);
             display: flex; align-items: center; justify-content: center; gap: 10px;
+            font-size: 15px;
         }
-        .btn-primary:hover { background: #1C1C1E; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .btn-primary:hover { background: #1C1C1E; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+        .btn-primary:active { transform: translateY(0) scale(0.98); }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            width: 100%; padding: 14px; background: none; border: 1.5px solid var(--border);
+            border-radius: 14px; color: var(--text); font-weight: 700; font-size: 14px;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-secondary:hover { background: var(--bg); border-color: var(--muted); }
 
         .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -267,16 +293,19 @@ This file handles the multi-step user registration and phone verification flow f
                         <div class="field">
                             <label>Business Name</label>
                             <input type="text" id="biz-name" placeholder="Acme Plumbing">
+                            <div class="field-error" id="biz-name-error"></div>
                         </div>
                         <div class="field">
                             <label>Email</label>
                             <input type="email" id="biz-email" placeholder="you@biz.com">
+                            <div class="field-error" id="biz-email-error"></div>
                         </div>
                     </div>
 
                     <div class="field">
                         <label>Phone Number</label>
                         <input type="tel" id="biz-phone">
+                        <div class="field-error" id="biz-phone-error"></div>
                     </div>
 
                     <div class="field">
@@ -287,6 +316,7 @@ This file handles the multi-step user registration and phone verification flow f
                                 <svg id="eye-icon-biz-password" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M2.458 12C3.732 7.943 7.523 5 12 5c3.79 0 7.14 2.276 8.542 5.458a2.5 2.5 0 010 2.084C19.14 15.724 15.79 18 12 18c-4.477 0-8.268-2.943-9.542-7z"/></svg>
                             </div>
                         </div>
+                        <div class="field-error" id="biz-password-error"></div>
                         <div class="strength-wrap" id="strength-root">
                             <div class="strength-meter">
                                 <div class="strength-segment"></div>
@@ -315,6 +345,7 @@ This file handles the multi-step user registration and phone verification flow f
                 <div style="display:flex;flex-direction:column;gap:12px;">
                     <div class="field">
                         <input type="text" inputmode="numeric" id="verify-code" maxlength="6" placeholder="000000" class="otp-input" oninput="onOtpInput(this)">
+                        <div class="field-error" id="verify-code-error" style="text-align:center;"></div>
                     </div>
 
                     <div style="text-align:center;font-size:13px;font-weight:600;color:var(--muted);">
@@ -327,7 +358,7 @@ This file handles the multi-step user registration and phone verification flow f
                         <div class="spinner" id="verify-spinner"></div>
                     </button>
 
-                    <button style="width:100%;padding:14px;background:none;border:1.5px solid var(--border);border-radius:18px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;" onclick="goBack()">Back</button>
+                    <button class="btn-secondary" onclick="goBack()">Back</button>
                 </div>
             </div>
 
@@ -400,8 +431,27 @@ This file handles the multi-step user registration and phone verification flow f
             setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; setTimeout(() => t.remove(), 400); }, 4000);
         }
 
+        function showError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const errorDiv = document.getElementById(`${fieldId}-error`);
+            if (field) field.classList.add('error');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.field input').forEach(i => i.classList.remove('error'));
+            document.querySelectorAll('.field-error').forEach(e => {
+                e.textContent = '';
+                e.style.display = 'none';
+            });
+        }
+
         /* [UI_TRANSITION_LOGIC] */
         function goToStep(n) {
+            clearErrors();
             const current = document.querySelector('.view.active');
             if (current) current.classList.remove('active');
             document.getElementById(`step-${n}`).classList.add('active');
@@ -486,25 +536,26 @@ This file handles the multi-step user registration and phone verification flow f
             const passEl = document.getElementById('biz-password');
             const phoneEl = document.getElementById('biz-phone');
 
-            [nameEl, emailEl, passEl, phoneEl].forEach(el => el.classList.remove('error'));
+            clearErrors();
 
+            let hasError = false;
             if (!iti.isValidNumber()) { 
-                toast('Please enter a valid phone number'); 
-                phoneEl.classList.add('error');
-                return; 
+                showError('biz-phone', 'Enter a valid mobile number');
+                hasError = true;
             }
+            if (!nameEl.value) { showError('biz-name', 'Business name required'); hasError = true; }
+            if (!emailEl.value) { showError('biz-email', 'Email required'); hasError = true; }
+            if (passEl.value.length < 8) { showError('biz-password', 'Minimum 8 characters'); hasError = true; }
+
+            if (hasError) return;
+
             const phone = iti.getNumber();
-
-            if (!nameEl.value || !emailEl.value || !passEl.value) { 
-                toast('Please fill in all professional details'); 
-                if(!nameEl.value) nameEl.classList.add('error');
-                if(!emailEl.value) emailEl.classList.add('error');
-                if(!passEl.value) passEl.classList.add('error');
-                return; 
-            }
-
             const btn = document.getElementById('reg-btn');
+            const spinner = document.getElementById('reg-spinner');
+
             btn.disabled = true;
+            if (spinner) spinner.style.display = 'block';
+
             try {
                 const res = await fetch(`${API_BASE}/register`, {
                     method: 'POST',
@@ -516,11 +567,7 @@ This file handles the multi-step user registration and phone verification flow f
                 
                 if (res.ok) {
                     localStorage.setItem('temp_phone', phone);
-                    sessionStorage.setItem('reg_email', emailEl.value.trim());
-                    sessionStorage.setItem('reg_password', passEl.value);
-                    
                     if (TRADSIEE_ENV.smsAuthEnabled === false) {
-                        // Skip step 2 entirely
                         await verifyCode("000000");
                         return;
                     }
@@ -533,19 +580,22 @@ This file handles the multi-step user registration and phone verification flow f
                     
                     if (verifyRes.status === 429) {
                         toast('Verification limit reached. Please wait 60 seconds.');
-                        btn.disabled = false;
                         return;
                     }
 
                     goToStep(2);
                     startTimer();
                 } else {
-                    toast(d.detail || 'Registration failed. Please try again.');
-                    if(d.detail && d.detail.includes('email')) emailEl.classList.add('error');
-                    if(d.detail && d.detail.includes('phone')) phoneEl.classList.add('error');
+                    const msg = d.detail || 'Registration failed';
+                    if (msg.toLowerCase().includes('email')) showError('biz-email', msg);
+                    else if (msg.toLowerCase().includes('phone')) showError('biz-phone', msg);
+                    else toast(msg);
                 }
             } catch { toast('Connection issue. Please try again.'); }
-            btn.disabled = false;
+            finally {
+                btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+            }
         }
 
         /* [API_ORCHESTRATION: MFA_VERIFICATION] */
@@ -553,11 +603,15 @@ This file handles the multi-step user registration and phone verification flow f
             const codeEl = document.getElementById('verify-code');
             const phone = localStorage.getItem('temp_phone');
             const btn = document.getElementById('verify-btn');
+            const spinner = document.getElementById('verify-spinner');
 
             const code = forcedCode || codeEl.value;
-            if (!code || code.length < 6) return;
+            clearErrors();
+            if (!code || code.length < 6) { showError('verify-code', 'Enter 6-digit code'); return; }
 
             btn.disabled = true;
+            if (spinner) spinner.style.display = 'block';
+
             try {
                 const res = await fetch(`${API_BASE}/verify-code`, {
                     method: 'POST',
@@ -567,15 +621,15 @@ This file handles the multi-step user registration and phone verification flow f
                 
                 if (res.ok) {
                     goToStep(3);
-                    // We no longer attempt auto-login here because the user 
-                    // must click the confirmation link in their email first.
                 } else { 
                     const d = await res.json();
-                    toast(d.detail || 'Invalid verification code'); 
-                    codeEl.classList.add('error');
+                    showError('verify-code', d.detail || 'Invalid code'); 
                 }
             } catch { toast('Error during verification'); }
-            btn.disabled = false;
+            finally {
+                btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+            }
         }
     </script>
 </body>
