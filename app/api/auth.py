@@ -10,7 +10,7 @@ from app.core.config import (
 )
 from app.core.dependencies import (
     run_sync, format_phone, is_rate_limited, generate_unique_slug, 
-    get_base_url, security, ForgotPasswordSchema, ResetPasswordSchema,
+    security, ForgotPasswordSchema, ResetPasswordSchema,
     UpdateProfileSchema, UpdateAccountSchema, AuthenticatedTradie,
     get_current_user, log_activity
 )
@@ -204,8 +204,7 @@ async def verify_code(data: dict, request: Request):
     
     profile_data = staged_res.data
     password = profile_data.pop("password")
-    base_url = get_base_url(request).rstrip('/')
-    redirect_url = f"{base_url}/verified"
+    redirect_url = f"{FRONTEND_URL}/verified"
     
     try:
         # 1. Final identity wipe to be absolutely sure
@@ -247,11 +246,10 @@ async def verify_code(data: dict, request: Request):
         # Explicitly trigger the confirmation email since Admin API create_user with email_confirm=False 
         # doesn't always send the "Welcome" email depending on Supabase version/config.
         try:
-            base_url = get_base_url(request).rstrip('/')
             await run_sync(supabase_admin.auth.resend, {
                 "type": "signup", 
                 "email": profile_data["email"],
-                "options": {"redirect_to": f"{base_url}/verified"}
+                "options": {"redirect_to": f"{FRONTEND_URL}/verified"}
             })
             logger.info(f"AUTH_EMAIL_TRIGGERED: Sent confirmation to {profile_data['email']} (redirect to /verified)")
         except Exception as e:
@@ -272,12 +270,11 @@ async def verify_code(data: dict, request: Request):
         raise HTTPException(status_code=500, detail="Failed to finalize account.")
 
 @router.post("/forgot-password")
-async def forgot_password(data: ForgotPasswordSchema, request: Request):
+async def forgot_password(data: ForgotPasswordSchema):
     try:
-        base_url = get_base_url(request)
         await run_sync(supabase_admin.auth.reset_password_for_email, 
             data.email, 
-            options={"redirect_to": f"{base_url}/update-password"}
+            options={"redirect_to": f"{FRONTEND_URL}/update-password"}
         )
         return {"status": "success"}
     except Exception as e:

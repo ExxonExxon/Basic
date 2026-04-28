@@ -133,7 +133,7 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
         
         # [SOFT_DELETE_VERIFICATION]
         # Ensure the user has not marked their profile for deletion.
-        profile_res = await run_sync(supabase_admin.table("tradies").select("deleted_at, email_confirmed_at").eq("id", user.id).single().execute)
+        profile_res = await run_sync(supabase_admin.table("tradies").select("deleted_at").eq("id", user.id).single().execute)
         
         if not profile_res.data:
             raise HTTPException(status_code=404, detail="Profile missing.")
@@ -141,7 +141,9 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
         if profile_res.data.get("deleted_at"):
             raise HTTPException(status_code=403, detail="ACCOUNT_SCHEDULED_FOR_DELETION")
 
-        if not profile_res.data.get("email_confirmed_at"):
+        # Check verification from the Auth User object instead of the DB table
+        is_confirmed = getattr(user, 'email_confirmed_at', None) or getattr(user, 'confirmed_at', None)
+        if not is_confirmed:
             raise HTTPException(status_code=403, detail="EMAIL_NOT_VERIFIED")
             
         return AuthenticatedTradie(user, get_supabase_user_client(auth.credentials))

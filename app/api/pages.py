@@ -5,7 +5,6 @@ from app.core.config import (
     LEAD_LIMITS_ENABLED, API_BASE_URL, HTML_PAGES_CACHE, 
     WIDGET_TEMPLATE_CACHE, logger
 )
-from app.core.dependencies import get_base_url
 
 router = APIRouter(tags=["Pages"])
 
