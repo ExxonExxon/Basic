@@ -62,7 +62,7 @@ async def upload_raw_video(request: Request, video: UploadFile = File(...)):
 
 @router.post("/submit-lead-data/{slug}")
 async def submit_lead_data(slug: str, data: LeadData, background_tasks: BackgroundTasks, request: Request):
-    tradie_res = await run_sync(supabase_admin.table("tradies").select("id, phone_number, business_name, deleted_at").eq("slug", slug).single().execute)
+    tradie_res = await run_sync(supabase_admin.table("tradies").select("id, phone_number, business_name, deleted_at, credits").eq("slug", slug).single().execute)
     if not tradie_res.data or tradie_res.data.get("deleted_at"): 
         raise HTTPException(status_code=404, detail="Not found.")
     tradie = tradie_res.data
@@ -77,6 +77,12 @@ async def submit_lead_data(slug: str, data: LeadData, background_tasks: Backgrou
 
     if new_lead:
         await log_activity(request, "LEAD_SUBMITTED", tradie_id=tradie["id"], metadata={"lead_id": new_lead["id"]})
+        
+        # Decrement credits if limits are enabled
+        if LEAD_LIMITS_ENABLED:
+            new_credits = max(0, (tradie.get("credits") or 0) - 1)
+            await run_sync(supabase_admin.table("tradies").update({"credits": new_credits}).eq("id", tradie["id"]).execute)
+            logger.info(f"CREDITS: Tradie {tradie['id']} decremented to {new_credits}")
 
     # 1. IMMEDIATE: Notify CUSTOMER only
     background_tasks.add_task(send_customer_confirmation, data.customer_phone, tradie["business_name"])

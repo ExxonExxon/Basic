@@ -1436,11 +1436,17 @@
         // Search Filter
         if (state.searchQuery) {
             const q = state.searchQuery.toLowerCase();
-            filtered = filtered.filter(l => 
-                (l.first_name + ' ' + l.last_name).toLowerCase().includes(q) || 
-                l.customer_phone.includes(q) ||
-                (l.customer_description && l.customer_description.toLowerCase().includes(q))
-            );
+            filtered = filtered.filter(l => {
+                const fullName = (l.first_name + ' ' + l.last_name).toLowerCase();
+                const rawPhone = l.customer_phone.toLowerCase();
+                const formattedPhone = formatPhoneDisplay(l.customer_phone).toLowerCase();
+                const description = (l.customer_description || '').toLowerCase();
+                
+                return fullName.includes(q) || 
+                       rawPhone.includes(q) || 
+                       formattedPhone.includes(q) ||
+                       description.includes(q);
+            });
         }
 
         // Sorting
@@ -1551,15 +1557,15 @@
                     
                     <div class="card-actions" style="display: ${state.bulkMode ? 'none' : 'grid'}; grid-template-columns: 1fr auto auto; gap: 8px;">
                         ${l.status === 'pending' ? `
-                            <button class="card-btn-primary" onclick="updateStatus('${l.id}', 'contacted')">
+                            <button class="card-btn-primary no-drag" onclick="updateStatus('${l.id}', 'contacted')">
                                 Move to Working
                             </button>
                         ` : (l.status === 'contacted' ? `
-                            <button class="card-btn-primary working" onclick="updateStatus('${l.id}', 'archived')">
+                            <button class="card-btn-primary working no-drag" onclick="updateStatus('${l.id}', 'archived')">
                                 Archive Lead
                             </button>
                         ` : `
-                            <button class="card-btn-primary" style="background: var(--blue);" onclick="updateStatus('${l.id}', 'pending')">
+                            <button class="card-btn-primary no-drag" style="background: var(--blue);" onclick="updateStatus('${l.id}', 'pending')">
                                 Restore Lead
                             </button>
                         `)}
@@ -1938,11 +1944,11 @@
                     if (actions) {
                         actions.innerHTML = `
                             ${s === 'pending' ? `
-                                <button class="card-btn-primary" onclick="updateStatus('${l.id}', 'contacted')">
+                                <button class="card-btn-primary no-drag" onclick="updateStatus('${l.id}', 'contacted')">
                                     Move to Working
                                 </button>
                             ` : `
-                                <button class="card-btn-primary working" onclick="updateStatus('${l.id}', 'archived')">
+                                <button class="card-btn-primary working no-drag" onclick="updateStatus('${l.id}', 'archived')">
                                     Archive Lead
                                 </button>
                             `}
