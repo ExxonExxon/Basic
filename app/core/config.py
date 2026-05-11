@@ -28,7 +28,7 @@ PATH_EMAIL_CHANGED = "/email-changed"
 def get_env_bool(key: str, default: str) -> bool:
     return os.getenv(key, default).lower() in ("true", "1", "yes", "on")
 
-LEAD_LIMITS_ENABLED = False
+LEAD_LIMITS_ENABLED = get_env_bool("LEAD_LIMITS_ENABLED", "false")
 SMS_AUTH_ENABLED = get_env_bool("SMS_AUTH_ENABLED", "true")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "tomas.gorjux@gmail.com")
 
