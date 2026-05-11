@@ -3,7 +3,9 @@ from fastapi import APIRouter, Request, Response, HTTPException, Depends
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from app.core.config import (
     LEAD_LIMITS_ENABLED, API_BASE_URL, HTML_PAGES_CACHE, 
-    WIDGET_TEMPLATE_CACHE, logger
+    WIDGET_TEMPLATE_CACHE, logger,
+    PATH_LOGIN, PATH_SIGNUP, PATH_PORTAL, PATH_UPDATE_PWD, PATH_PREVIEW,
+    PATH_VERIFIED, PATH_EMAIL_CHANGED
 )
 
 router = APIRouter(tags=["Pages"])
@@ -171,30 +173,30 @@ async def get_widget_ui(slug: str):
 async def serve_home():
     return HTML_PAGES_CACHE.get("login", "Page missing.")
 
-@router.get(os.getenv("PATH_LOGIN", "/login"), response_class=HTMLResponse)
+@router.get(PATH_LOGIN, response_class=HTMLResponse)
 async def serve_login():
     return HTML_PAGES_CACHE.get("login", "Page missing.")
 
-@router.get(os.getenv("PATH_SIGNUP", "/signup"), response_class=HTMLResponse)
+@router.get(PATH_SIGNUP, response_class=HTMLResponse)
 async def serve_signup():
     return HTML_PAGES_CACHE.get("signup", "Page missing.")
 
-@router.get(os.getenv("PATH_PORTAL", "/portal"), response_class=HTMLResponse)
+@router.get(PATH_PORTAL, response_class=HTMLResponse)
 async def serve_portal():
     return HTML_PAGES_CACHE.get("portal", "Page missing.")
 
-@router.get(os.getenv("PATH_UPDATE_PWD", "/update-password"), response_class=HTMLResponse)
+@router.get(PATH_UPDATE_PWD, response_class=HTMLResponse)
 async def serve_update_password():
     return HTML_PAGES_CACHE.get("update-password", "Page missing.")
 
-@router.get(os.getenv("PATH_PREVIEW", "/preview"), response_class=HTMLResponse)
+@router.get(PATH_PREVIEW, response_class=HTMLResponse)
 async def serve_preview():
     return HTML_PAGES_CACHE.get("preview", "Page missing.")
 
-@router.get("/verified", response_class=HTMLResponse)
+@router.get(PATH_VERIFIED, response_class=HTMLResponse)
 async def serve_verified():
     return HTML_PAGES_CACHE.get("verified", "Page missing.")
 
-@router.get("/email-changed", response_class=HTMLResponse)
+@router.get(PATH_EMAIL_CHANGED, response_class=HTMLResponse)
 async def serve_email_changed():
     return HTML_PAGES_CACHE.get("email-changed", "Page missing.")

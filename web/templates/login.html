@@ -308,6 +308,26 @@ orchestrating login, password recovery, and session establishment.
         */
         const API_BASE = TRADSIEE_ENV.API_BASE;
 
+        // [INIT: HASH_INTERCEPTION]
+        // Intercepts tokens from Supabase if they land on the login page (due to Site URL defaults)
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.location.hash) {
+                const params = new URLSearchParams(window.location.hash.substring(1));
+                const accessToken = params.get('access_token');
+                const type = params.get('type');
+                
+                if (accessToken) {
+                    if (type === 'recovery') {
+                        window.location.href = '[[PATH_UPDATE_PWD]]' + window.location.hash;
+                    } else if (type === 'signup') {
+                        window.location.href = '/verified' + window.location.hash;
+                    } else if (type === 'email_change') {
+                        window.location.href = '/email-changed' + window.location.hash;
+                    }
+                }
+            }
+        });
+
         function toast(m, type = 'error') {
             const c = document.getElementById('toast-container');
             const t = document.createElement('div');

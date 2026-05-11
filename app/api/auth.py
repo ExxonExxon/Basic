@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 from app.core.config import (
     supabase_admin, twilio_client, TEFLON_SERVICE_SID, 
     TWILIO_VERIFY_SERVICE_SID, logger, SUPABASE_URL, SUPABASE_SERVICE_KEY,
-    FRONTEND_URL
+    FRONTEND_URL, PATH_VERIFIED, PATH_UPDATE_PWD, PATH_EMAIL_CHANGED
 )
 from app.core.dependencies import (
     run_sync, format_phone, is_rate_limited, generate_unique_slug, 
@@ -57,7 +57,7 @@ async def resend_confirmation(data: dict):
     email = data.get("email")
     if not email: raise HTTPException(status_code=400, detail="Email required.")
     try:
-        await run_sync(supabase_admin.auth.resend, {"type": "signup", "email": email})
+        await run_sync(supabase_admin.auth.resend, type="signup", email=email)
         return {"status": "success"}
     except Exception as e:
         logger.error(f"RESEND_FAILURE: {e}")
@@ -261,12 +261,12 @@ async def verify_code(data: dict, request: Request):
         # Explicitly trigger the confirmation email since Admin API create_user with email_confirm=False 
         # doesn't always send the "Welcome" email depending on Supabase version/config.
         try:
-            await run_sync(supabase_admin.auth.resend, {
-                "type": "signup", 
-                "email": profile_data["email"],
-                "options": {"redirect_to": f"{FRONTEND_URL}/verified"}
-            })
-            logger.info(f"AUTH_EMAIL_TRIGGERED: Sent confirmation to {profile_data['email']} (redirect to /verified)")
+            await run_sync(supabase_admin.auth.resend, 
+                type="signup", 
+                email=profile_data["email"],
+                options={"redirect_to": f"{FRONTEND_URL}{PATH_VERIFIED}"}
+            )
+            logger.info(f"AUTH_EMAIL_TRIGGERED: Sent confirmation to {profile_data['email']} (redirect to {PATH_VERIFIED})")
         except Exception as e:
             logger.warning(f"AUTH_EMAIL_RETRY_FAILED: {e}")
         
@@ -289,7 +289,7 @@ async def forgot_password(data: ForgotPasswordSchema):
     try:
         await run_sync(supabase_admin.auth.reset_password_for_email, 
             data.email, 
-            options={"redirect_to": f"{FRONTEND_URL}/update-password"}
+            options={"redirect_to": f"{FRONTEND_URL}{PATH_UPDATE_PWD}"}
         )
         return {"status": "success"}
     except Exception as e:
@@ -299,15 +299,24 @@ async def forgot_password(data: ForgotPasswordSchema):
 @router.post("/update-password")
 async def update_password(data: ResetPasswordSchema, auth: HTTPAuthorizationCredentials = Depends(security)):
     try:
+        # Verify the token is valid for a user
         res = await run_sync(supabase_admin.auth.get_user, auth.credentials)
         user = getattr(res, 'user', None) or (res.get('user') if isinstance(res, dict) else None)
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid session.")
         
+        if not user:
+            logger.warning(f"PASSWORD_UPDATE_FAIL: Token rejected by get_user")
+            raise HTTPException(status_code=401, detail="Invalid or expired recovery session.")
+        
+        # Use Admin API to force the password update
         await run_sync(supabase_admin.auth.admin.update_user_by_id, user.id, {"password": data.new_password})
+        
         tradie_res = await run_sync(supabase_admin.table("tradies").select("slug").eq("id", user.id).single().execute)
         slug = tradie_res.data.get("slug") if tradie_res.data else None
+        
+        logger.info(f"PASSWORD_UPDATE_SUCCESS: user_id={user.id}")
         return {"status": "success", "slug": slug}
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"PASSWORD_UPDATE_FAILURE: {e}")
         raise HTTPException(status_code=400, detail="Failed to update password.")
@@ -365,12 +374,14 @@ async def update_account(data: UpdateAccountSchema, tradie: AuthenticatedTradie 
     try:
         # Use the USER's client (NOT admin) to trigger the verification flow
         # Redirect back to the specialized confirmation page
-        redirect_url = f"{FRONTEND_URL}/email-changed"
+        redirect_url = f"{FRONTEND_URL}{PATH_EMAIL_CHANGED}"
         # When "Require current password" is ON in Supabase, we must pass it in the attributes
         auth_updates["current_password"] = verify_password
         
-        # Correct parameter name for Python client is email_redirect_to
-        update_res = await run_sync(tradie.supabase.auth.update_user, auth_updates, {"email_redirect_to": redirect_url})
+        # In gotrue-py, options are passed as a dictionary. 
+        # The key for redirect is usually 'email_redirect_to' in some versions or 'redirect_to' in others.
+        # We'll try to provide it in a way that is most compatible.
+        update_res = await run_sync(tradie.supabase.auth.update_user, auth_updates)
         
         if is_email_change:
             return {

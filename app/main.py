@@ -9,7 +9,8 @@ from fastapi.exceptions import HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import (
-    logger, WIDGET_TEMPLATE_CACHE, HTML_PAGES_CACHE
+    logger, WIDGET_TEMPLATE_CACHE, HTML_PAGES_CACHE,
+    PATH_LOGIN, PATH_SIGNUP, PATH_PORTAL, PATH_UPDATE_PWD, PATH_PREVIEW
 )
 from app.api import auth, leads, admin, pages
 from app.core.video_processor import process_video_queue_worker
@@ -38,11 +39,11 @@ async def lifespan(app: FastAPI):
             logger.error(f"CRITICAL_FAILURE: Missing environment variables: {', '.join(missing)}")
 
         ui_paths = {
-            "[[PATH_LOGIN]]": os.getenv("PATH_LOGIN", "/login"),
-            "[[PATH_SIGNUP]]": os.getenv("PATH_SIGNUP", "/signup"),
-            "[[PATH_PORTAL]]": os.getenv("PATH_PORTAL", "/portal"),
-            "[[PATH_UPDATE_PWD]]": os.getenv("PATH_UPDATE_PWD", "/update-password"),
-            "[[PATH_PREVIEW]]": os.getenv("PATH_PREVIEW", "/preview"),
+            "[[PATH_LOGIN]]": PATH_LOGIN,
+            "[[PATH_SIGNUP]]": PATH_SIGNUP,
+            "[[PATH_PORTAL]]": PATH_PORTAL,
+            "[[PATH_UPDATE_PWD]]": PATH_UPDATE_PWD,
+            "[[PATH_PREVIEW]]": PATH_PREVIEW,
         }
 
         def process_html(filename: str, is_widget: bool = False) -> str:

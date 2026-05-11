@@ -16,6 +16,15 @@ logger = logging.getLogger("tradsiee-engine")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://tradsiee.com")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://tradsiee.com")
 
+# UI Path Constants
+PATH_LOGIN = os.getenv("PATH_LOGIN", "/login")
+PATH_SIGNUP = os.getenv("PATH_SIGNUP", "/signup")
+PATH_PORTAL = os.getenv("PATH_PORTAL", "/portal")
+PATH_UPDATE_PWD = os.getenv("PATH_UPDATE_PWD", "/update-password")
+PATH_PREVIEW = os.getenv("PATH_PREVIEW", "/preview")
+PATH_VERIFIED = "/verified"
+PATH_EMAIL_CHANGED = "/email-changed"
+
 def get_env_bool(key: str, default: str) -> bool:
     return os.getenv(key, default).lower() in ("true", "1", "yes", "on")
 
